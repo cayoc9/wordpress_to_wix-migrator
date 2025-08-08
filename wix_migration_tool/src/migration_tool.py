@@ -11,12 +11,12 @@ import hashlib
 import time
 
 class WordPressMigrationTool:
-    def __init__(self):
+    def __init__(self, config_file='config/migration_config.json'):
         """
         Inicializa a ferramenta de migração.
-        As configurações são carregadas diretamente das variáveis de ambiente.
+        As configurações são carregadas a partir de um arquivo JSON.
         """
-        self.config = self.load_config_from_env()
+        self.config = self.load_config(config_file)
         self.session = requests.Session()
         self.migration_data = {
             'posts': [],
@@ -26,12 +26,26 @@ class WordPressMigrationTool:
             'errors': []
         }
     
-    def load_config_from_env(self):
-        """Carrega a configuração a partir das variáveis de ambiente."""
-        return {
+    def load_config(self, config_file):
+        """Carrega a configuração a partir de um arquivo JSON."""
+        try:
+            with open(config_file, 'r') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return self.create_default_config(config_file)
+    
+    def create_default_config(self, config_file):
+        """Cria um arquivo de configuração padrão."""
+        default_config = {
+            "wordpress": {
+                "site_url": "",
+                "api_endpoint": "/wp-json/wp/v2/",
+                "username": "",
+                "password": ""
+            },
             "wix": {
-                "site_id": os.getenv("WIX_SITE_ID"),
-                "api_key": os.getenv("WIX_API_KEY"),
+                "site_id": "",
+                "api_key": "",
                 "base_url": "https://www.wixapis.com"
             },
             "migration": {
@@ -49,6 +63,13 @@ class WordPressMigrationTool:
                 "check_internal_links": True
             }
         }
+        
+        # Garante que o diretório exista antes de tentar criar o arquivo
+        os.makedirs(os.path.dirname(config_file), exist_ok=True)
+        with open(config_file, 'w') as f:
+            json.dump(default_config, f, indent=2)
+        
+        return default_config
     
     def log_message(self, message, level='INFO'):
         """Log migration messages"""
