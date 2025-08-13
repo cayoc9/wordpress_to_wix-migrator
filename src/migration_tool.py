@@ -42,22 +42,25 @@ class WordPressMigrationTool:
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None, *, config_file: Optional[str] = None) -> None:
-        if config_file:
+        if config_file and os.path.exists(config_file):
             with open(config_file, "r", encoding="utf-8") as f:
                 config = json.load(f)
-        if config is None:
-            # Default configuration from environment variables
-            config = {
-                "wix": {
-                    "site_id": os.getenv("WIX_SITE_ID", ""),
-                    "api_key": os.getenv("WIX_API_KEY", ""),
-                    "base_url": "https://www.wixapis.com",
-                },
-                "migration": {
-                    "dry_run": False,
-                    "limit": None,
-                },
-            }
+        elif config is None:
+            # Default configuration
+            config = {}
+
+        # Ensure essential keys exist to prevent KeyErrors
+        config.setdefault("wix", {})
+        config["wix"].setdefault("site_id", os.getenv("WIX_SITE_ID", ""))
+        config["wix"].setdefault("api_key", os.getenv("WIX_API_KEY", ""))
+        config["wix"].setdefault("base_url", "https://www.wixapis.com")
+
+        config.setdefault("migration", {})
+        config["migration"].setdefault("dry_run", False)
+        config["migration"].setdefault("limit", None)
+        config["migration"].setdefault("wordpress_domain", "")
+        config["migration"].setdefault("wix_site_url", "")
+        
         self.config = config
 
     def log_message(self, message: str, level: str = "INFO") -> None:
