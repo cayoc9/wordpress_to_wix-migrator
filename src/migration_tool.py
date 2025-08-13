@@ -123,6 +123,8 @@ class WordPressMigrationTool:
                             post["FeaturedImageUrl"] = new_url
                         else:
                             report_error("MEDIA_UPLOAD", post)
+                            self.log_message(f"Failed to upload media for post '{slug}'", "ERROR")
+
                 # Taxonomies
                 post["CategoryIds"] = []
                 post["TagIds"] = []
@@ -136,8 +138,10 @@ class WordPressMigrationTool:
                         self.log_message(f"Dry-run: would ensure tags {post['Tags']}")
                     else:
                         post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", post["Tags"])
+                
                 # HTML conversion
                 ricos = convert_html_to_ricos(post.get("ContentHTML", ""), embed_strategy="html_iframe")
+                
                 # Create draft
                 if dry_run:
                     self.log_message(f"Dry-run: would create draft for {slug}")
@@ -146,22 +150,29 @@ class WordPressMigrationTool:
                     try:
                         draft_resp = create_draft_post(self.config["wix"], post, ricos)
                     except Exception as e:
-                        # If the draft fails due to HTML embeds, strip and retry once
+                        error_details = e.response.text if hasattr(e, "response") else str(e)
                         if hasattr(e, "response") and e.response.status_code == 400:
                             ricos_no_html = strip_html_nodes(json.loads(json.dumps(ricos)))
                             try:
                                 draft_resp = create_draft_post(self.config["wix"], post, ricos_no_html, allow_html_iframe=False)
                             except Exception as e2:
+                                error_details_2 = e2.response.text if hasattr(e2, "response") else str(e2)
                                 report_error("WIX_DRAFT_400", post, e2)
+                                self.log_message(f"Failed to create draft for post '{slug}' after stripping HTML: {error_details_2}", "ERROR")
                                 continue
                         else:
                             report_error("WIX_NETWORK", post, e)
+                            self.log_message(f"Network error creating draft for post '{slug}': {error_details}", "ERROR")
                             continue
+                
                 draft_id = (draft_resp.get("post") or {}).get("id")
                 if not draft_id:
                     report_error("WIX_DRAFT_400", post)
+                    self.log_message(f"Draft creation for post '{slug}' did not return an ID.", "ERROR")
                     continue
+                
                 report_ok("DRAFT_CREATED", post, {"draft_id": draft_id})
+                
                 # Publish
                 if dry_run:
                     new_url = f"{new_base_url.rstrip('/')}/post/{slug}"
@@ -170,15 +181,22 @@ class WordPressMigrationTool:
                         pub_resp = publish_post(self.config["wix"], draft_id)
                         new_url = (pub_resp.get("post") or {}).get("url") or f"{new_base_url.rstrip('/')}/post/{slug}"
                     except Exception as e:
+                        error_details = e.response.text if hasattr(e, "response") else str(e)
                         report_error("PUBLISH", post, e)
+                        self.log_message(f"Failed to publish post '{slug}': {error_details}", "ERROR")
                         continue
+                
                 migrated.append({"Slug": slug, "Permalink": post.get("Permalink"), "NewURL": new_url})
                 report_ok("PUBLISHED", post, {"url": new_url})
+
             except Exception as e:
+                error_details = e.response.text if hasattr(e, "response") else str(e)
                 report_error("WIX_NETWORK", post, e)
+                self.log_message(f"An unexpected error occurred while migrating post '{slug}': {error_details}", "ERROR")
+
         # Generate redirects
         try:
-            generate_redirects_csv(migrated, old_domain=self.config.get("old_domain", ""), new_base=new_base_url)
+            generate_redirects_csv(migrated, old_domain=self.config.get("migration", {}).get("wordpress_domain", ""), new_base=new_base_url)
             self.log_message(f"Redirect CSV generated with {len(migrated)} entries")
         except Exception as e:
             self.log_message(f"Failed to generate redirects: {e}", "ERROR")

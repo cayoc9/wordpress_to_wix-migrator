@@ -291,17 +291,17 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
     :return: The response payload from Wix describing the newly created draft.
     :raises requests.HTTPError: on failure.
     """
-    api_url = f"{cfg['base_url']}/blog/v3/drafts/posts"
+    api_url = f"{cfg['base_url']}/blog/v3/draft-posts"
     # Assemble the draft post payload
     body: Dict[str, Any] = {
-        "post": {
+        "draftPost": {
             "title": post.get("Title") or "",
             "richContent": ricos,
             "excerpt": (post.get("Excerpt") or "")[:3000],
             "coverMedia": None,
             "categoryIds": post.get("CategoryIds", []),
             "tagIds": post.get("TagIds", []),
-            "seoSlug": post.get("Slug") or "",
+            "slug": post.get("Slug") or "",
             "seoData": {
                 "title": post.get("MetaTitle") or post.get("Title") or "",
                 "description": (post.get("MetaDescription") or post.get("Excerpt") or "")[:156],
@@ -310,7 +310,7 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
     }
     # Cover image
     if post.get("FeaturedImageUrl"):
-        body["post"]["coverMedia"] = {"image": {"src": post["FeaturedImageUrl"]}}
+        body["draftPost"]["coverMedia"] = {"image": {"src": post["FeaturedImageUrl"]}}
 
     _limiter.wait()
     def do_request() -> requests.Response:
@@ -337,7 +337,7 @@ def publish_post(cfg: Dict[str, str], draft_id: str) -> Dict[str, Any]:
     :return: The response payload from Wix describing the published post.
     :raises requests.HTTPError: on failure.
     """
-    api_url = f"{cfg['base_url']}/blog/v3/drafts/posts/{draft_id}/publish"
+    api_url = f"{cfg['base_url']}/blog/v3/draft-posts/{draft_id}/publish"
     _limiter.wait()
     def do_request() -> requests.Response:
         return requests.post(api_url, headers=wix_headers(cfg))

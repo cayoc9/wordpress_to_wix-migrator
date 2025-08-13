@@ -6,6 +6,7 @@ import glob
 import json
 import os
 from src.migration_tool import WordPressMigrationTool
+from src.utils.pre_flight_checks import run_wix_pre_flight_checks, PreFlightCheckError
 
 CONFIG_FILE = "config/migration_config.json"
 
@@ -49,6 +50,14 @@ def main():
 
     # Prompt for any missing configuration
     prompt_for_config(tool)
+
+    # Run pre-flight checks to validate configuration before starting migration
+    try:
+        run_wix_pre_flight_checks(tool.config)
+    except PreFlightCheckError as e:
+        tool.log_message(f"Pre-flight check failed: {e}", level="ERROR")
+        tool.log_message("Migration aborted.", level="ERROR")
+        return
 
     # Dynamically find export files in the 'docs' directory
     docs_path = "docs/"

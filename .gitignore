@@ -146,3 +146,7 @@ cython_debug/
 /plan_refact.md
 /relatorio_analise.md
 /docs/*
+
+
+config/*
+docs/*
