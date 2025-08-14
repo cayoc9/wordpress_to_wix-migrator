@@ -4,7 +4,7 @@ import csv
 from src.migration_tool import WordPressMigrationTool
 from src.extractors.wordpress_extractor import extract_posts_from_csv, extract_posts_from_xml
 from src.migrators.wix_migrator import create_draft_post
-from src.parsers.html_parser import convert_html_to_rich_content
+from src.parsers.ricos_parser import convert_html_to_ricos
 
 def main():
     """
@@ -53,15 +53,15 @@ def main():
     for post in posts:
         tool.log_message(f"Migrando post: {post.get('Title')}")
 
-        # Converte o conteúdo HTML para o formato Rich Content do Wix
-        html_content = post.get('Content', '')
-        rich_content = convert_html_to_rich_content(html_content, tool.config['wix'])
+        # Converte o conteúdo HTML para o formato Ricos do Wix
+        html_content = post.get('ContentHTML', '')
+        ricos = convert_html_to_ricos(html_content, embed_strategy="html_iframe")
 
-        if not rich_content.get("nodes"):
+        if not ricos.get("nodes"):
             tool.log_message(f"Conteúdo de '{post.get('Title')}' resultou em 0 nós. Pulando post.", level='WARNING')
             continue
 
-        response = create_draft_post(tool.config['wix'], post, rich_content)
+        response = create_draft_post(tool.config['wix'], post, ricos)
         if response:
             new_url = response.get('draftPost', {}).get('url', {}).get('base', '') + response.get('draftPost', {}).get('url', {}).get('path', '')
             tool.log_message(f"Post '{post.get('Title')}' criado com sucesso no Wix. Nova URL: {new_url}", level='SUCCESS')
