@@ -63,7 +63,11 @@ def main():
 
         response = create_draft_post(tool.config['wix'], post, rich_content)
         if response:
-            new_url = response.get('draftPost', {}).get('url', {}).get('base', '') + response.get('draftPost', {}).get('url', {}).get('path', '')
+            url_data = response.get('post', {}).get('url', '')
+            if isinstance(url_data, dict):
+                new_url = url_data.get('base', '') + url_data.get('path', '')
+            else:
+                new_url = url_data or ''
             tool.log_message(f"Post '{post.get('Title')}' criado com sucesso no Wix. Nova URL: {new_url}", level='SUCCESS')
             
             # Registra o mapeamento de URLs
