@@ -1,1 +1,6 @@
-[2025-07-30 15:19:27] INFO: Starting WordPress to Wix migration.\n[2025-07-30 15:19:27] ERROR: Wix API credentials not found in the configuration file.\n
+[2025-07-30 15:19:27] INFO: Starting WordPress to Wix migration.\n[2025-07-30 15:19:27] ERROR: Wix API credentials not found in the configuration file.\nINFO: Starting WordPress to Wix migration.
+WARNING: Wix site URL not found in config file.
+WARNING: WordPress domain not found in config file.
+INFO: Starting WordPress to Wix migration.
+ERROR: Pre-flight check failed: O Wix Site ID fornecido está incorreto. Verifique a Etapa A das instruções.
+ERROR: Migration aborted.

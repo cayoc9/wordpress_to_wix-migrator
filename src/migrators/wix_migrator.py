@@ -322,7 +322,12 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
         )
     try:
         resp = with_retries(do_request)
-        return resp.json()
+        raw = resp.json()
+        # Normalize API response for compatibility with callers expecting {"post": {id, url}}
+        if isinstance(raw, dict) and "draftPost" in raw:
+            draft = raw.get("draftPost") or {}
+            return {"post": {"id": draft.get("id"), "url": draft.get("url")}}
+        return raw
     except requests.HTTPError as e:
         # If we allowed HTML and the Wix API rejects the request (400) we
         # rethrow and let the caller decide whether to strip HTML and retry.
