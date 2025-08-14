@@ -1,83 +1,104 @@
 """
-Error reporting utilities for the WordPress → Wix migration.
+Structured logging helpers for migration errors and successes.
 
-This module provides a simple mechanism for recording structured errors
-during the migration process.  Each error is associated with a unique
-code (e.g., ``MEDIA_UPLOAD``, ``WIX_DRAFT_400``) and includes the
-original post data that caused the failure, along with any relevant
-exception information.  Successful operations can also be logged using
-:func:`report_ok`.
+The :mod:`src.utils.errors` module centralizes the writing of log entries for
+both failed and successful operations during the migration.  Each entry is
+appended to a JSON Lines file under ``reports/migration`` so that the
+information can be reviewed or parsed after a run.
 
-All errors and successes are stored in the global ``ERRORS`` dictionary,
-keyed by post slug.  This allows for easy generation of a summary report
-at the end of the migration, detailing which posts succeeded, which
-failed, and why.
+Two public functions are provided:
 
-Usage example::
+``report_error``
+    Record an error that occurred for a post.  An optional exception can be
+    supplied and will be serialized to the log.
 
-    from src.utils.errors import report_error, report_ok, ERRORS
+``report_ok``
+    Record a successful step for a post.  Additional key/value information can
+    be attached to the entry via the ``extra`` parameter.
 
-    post = {"Slug": "my-first-post", ...}
-    try:
-        # ... perform some operation ...
-        report_ok("DRAFT_CREATED", post, {"draft_id": "123"})
-    except Exception as e:
-        report_error("WIX_NETWORK", post, e)
-
-    # Later, to generate a report:
-    for slug, entries in ERRORS.items():
-        print(f"Post: {slug}")
-        for entry in entries:
-            print(f"  - {entry['status']}: {entry['code']}")
-            if entry.get('error'):
-                print(f"    {entry['error']}")
-
+The ``ERRORS`` dictionary maps error or event codes to human readable
+messages.  Codes not present in the dictionary fall back to the code itself.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+import json
+import os
+from typing import Any, Dict, Optional
 
-# Global dictionary to store errors and successes, keyed by post slug.
-# Each value is a list of dictionaries, allowing multiple events per post.
-ERRORS: Dict[str, List[Dict[str, Any]]] = {}
+# Mapping of event codes used throughout the migration to descriptive messages.
+# The keys include both error and success codes as the same lookup is used by
+# :func:`report_error` and :func:`report_ok`.
+ERRORS: Dict[str, str] = {
+    "MEDIA_UPLOAD": "Failed to upload media to Wix",
+    "WIX_DRAFT_400": "Wix API returned 400 when creating draft",
+    "WIX_NETWORK": "Network error communicating with Wix",
+    "PUBLISH": "Failed to publish post",
+    "DRAFT_CREATED": "Draft created successfully",
+    "PUBLISHED": "Post published successfully",
+}
 
-def report_error(code: str, post: Dict[str, Any], error: Optional[Exception] = None) -> None:
+_REPORT_DIR = os.path.join("reports", "migration")
+_ERROR_LOG = os.path.join(_REPORT_DIR, "errors.jsonl")
+_OK_LOG = os.path.join(_REPORT_DIR, "success.jsonl")
+
+
+def _write_jsonl(path: str, data: Dict[str, Any]) -> None:
+    """Append ``data`` as a JSON object followed by a newline to ``path``."""
+    os.makedirs(_REPORT_DIR, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+        f.write("\n")
+
+
+def report_error(code: str, post: Dict[str, Any], exc: Optional[Exception] = None) -> None:
+    """Log an error event for ``post``.
+
+    Parameters
+    ----------
+    code:
+        A key identifying the type of error.  If ``code`` is present in
+        :data:`ERRORS` its value will be used as the message.
+    post:
+        The post dictionary associated with the error.  Only the ``Slug`` and
+        ``Title`` keys are referenced if present.
+    exc:
+        Optional exception instance that triggered the error.  The string
+        representation of the exception will be included in the log entry.
     """
-    Record a failed migration step for a specific post.
-
-    :param code: A unique, uppercase string identifying the error type.
-    :param post: The normalized post dictionary that was being processed.
-    :param error: The exception that was raised, if any.
-    """
-    slug = post.get("Slug") or post.get("ID") or "unknown-post"
-    if slug not in ERRORS:
-        ERRORS[slug] = []
-    err_obj = {
-        "status": "error",
+    message = ERRORS.get(code, code)
+    entry: Dict[str, Any] = {
         "code": code,
-        "post": post,
+        "message": message,
+        "slug": post.get("Slug"),
+        "title": post.get("Title"),
     }
-    if error:
-        err_obj["error"] = str(error)
-    ERRORS[slug].append(err_obj)
+    if exc is not None:
+        entry["error"] = str(exc)
+    print(f"[ERROR] {message} - {post.get('Slug', '')}")
+    _write_jsonl(_ERROR_LOG, entry)
 
-def report_ok(code: str, post: Dict[str, Any], data: Optional[Dict[str, Any]] = None) -> None:
-    """
-    Record a successful migration step for a specific post.
 
-    :param code: A unique, uppercase string identifying the success type.
-    :param post: The normalized post dictionary that was being processed.
-    :param data: Optional dictionary of supplemental data (e.g., new URL).
+def report_ok(code: str, post: Dict[str, Any], extra: Optional[Dict[str, Any]] = None) -> None:
+    """Log a successful event for ``post``.
+
+    Parameters
+    ----------
+    code:
+        A key identifying the type of event.
+    post:
+        The post dictionary associated with the event.
+    extra:
+        Optional dictionary of additional fields to merge into the log entry.
     """
-    slug = post.get("Slug") or post.get("ID") or "unknown-post"
-    if slug not in ERRORS:
-        ERRORS[slug] = []
-    ok_obj = {
-        "status": "ok",
+    message = ERRORS.get(code, code)
+    entry: Dict[str, Any] = {
         "code": code,
-        "post": post,
+        "message": message,
+        "slug": post.get("Slug"),
+        "title": post.get("Title"),
     }
-    if data:
-        ok_obj.update(data)
-    ERRORS[slug].append(ok_obj)
+    if extra:
+        entry.update(extra)
+    print(f"[OK] {message} - {post.get('Slug', '')}")
+    _write_jsonl(_OK_LOG, entry)

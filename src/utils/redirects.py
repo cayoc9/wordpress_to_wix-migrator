@@ -1,68 +1,54 @@
 """
-Redirect generation utilities for the WordPress → Wix migration.
+Generation of redirect mapping CSV files.
 
-This module provides a helper function, :func:`generate_redirects_csv`,
-to create a CSV file mapping old WordPress post URLs to their new
-locations on the Wix site.  The resulting CSV is suitable for use with
-Wix's bulk redirect import tool.
-
-The function handles both full URLs (if an ``old_domain`` is provided)
-and relative paths.  It correctly constructs the source and target paths
-for the redirect map.
-
-Usage example::
-
-    from src.utils.redirects import generate_redirects_csv
-
-    migrated_posts = [
-        {"Slug": "post-one", "Permalink": "http://old.com/2023/01/post-one/", "NewURL": "https://new.wix.com/post/post-one"},
-        {"Slug": "post-two", "Permalink": "http://old.com/2023/02/post-two/", "NewURL": "https://new.wix.com/post/post-two"},
-    ]
-
-    generate_redirects_csv(migrated_posts, old_domain="old.com", new_base="https://new.wix.com")
-
-This will produce a file named ``redirects.csv`` with the following
-content::
-
-    Source Path,Target Path
-    /2023/01/post-one/,/post/post-one
-    /2023/02/post-two/,/post/post-two
-
+The :func:`generate_redirects_csv` helper writes a CSV file containing the
+mapping of WordPress URLs to their new Wix counterparts.  The resulting file is
+used to configure 301 redirects so that existing links continue to work after
+migration.
 """
 
 from __future__ import annotations
 
 import csv
-from typing import Dict, List
-from urllib.parse import urlparse
+import os
+from typing import Dict, Iterable
 
-def generate_redirects_csv(migrated: List[Dict[str, str]], *, old_domain: str = "", new_base: str = "") -> None:
+
+def generate_redirects_csv(
+    posts: Iterable[Dict[str, str]], *, old_domain: str, new_base: str, out_path: str = "reports/redirect_map.csv"
+) -> str:
+    """Generate a CSV mapping old WordPress URLs to new Wix URLs.
+
+    Parameters
+    ----------
+    posts:
+        Iterable of dictionaries with at least ``Slug`` and ``NewURL`` keys.
+        ``Permalink`` is used if available to determine the original URL.
+    old_domain:
+        The base domain of the legacy WordPress site.  If a post does not
+        include a ``Permalink`` this domain is combined with the ``Slug`` to
+        construct the old URL.
+    new_base:
+        Base URL for the Wix site.  Used as a fallback when ``NewURL`` is not
+        provided.
+    out_path:
+        Location of the CSV file to be written.  The parent directory is
+        created automatically.
+
+    Returns
+    -------
+    str
+        The path of the generated CSV file.
     """
-    Generate a CSV file mapping old WordPress URLs to new Wix URLs.
-
-    The output format is a two-column CSV with headers "Source Path" and
-    "Target Path", suitable for Wix's 301 redirect importer.
-
-    :param migrated: A list of dictionaries, where each dictionary
-                     represents a successfully migrated post and must
-                     contain keys ``Permalink`` (the old URL) and
-                     ``NewURL`` (the new Wix URL).
-    :param old_domain: The domain of the old WordPress site. If provided,
-                       it will be stripped from the permalinks to create
-                       relative source paths.
-    :param new_base: The base URL of the new Wix site. If provided, it
-                     will be stripped from the new URLs to create
-                     relative target paths.
-    """
-    with open("reports/redirect_map.csv", "w", newline="", encoding="utf-8") as f:
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["Source Path", "Target Path"])
-        for item in migrated:
-            old_url = item.get("Permalink", "")
-            new_url = item.get("NewURL", "")
-            if not old_url or not new_url:
-                continue
-            # Create relative paths
-            old_path = urlparse(old_url).path
-            new_path = urlparse(new_url).path
-            writer.writerow([old_path, new_path])
+        writer.writerow(["OldURL", "NewURL"])
+        for post in posts:
+            slug = post.get("Slug", "")
+            old_url = post.get("Permalink")
+            if not old_url and old_domain:
+                old_url = f"{old_domain.rstrip('/')}/{slug}" if slug else old_domain.rstrip('/')
+            new_url = post.get("NewURL") or f"{new_base.rstrip('/')}/{slug}"
+            writer.writerow([old_url, new_url])
+    return out_path

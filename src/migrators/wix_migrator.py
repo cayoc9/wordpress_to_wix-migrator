@@ -1,16 +1,17 @@
 """
-Wix API helper functions for WordPress → Wix migration.
+Funções auxiliares da API Wix para migração de WordPress → Wix.
 
-This module implements low-level interactions with the Wix REST API.
-Functions defined here perform media uploads via the two-step
-``/upload/url`` and ``/upload/complete`` endpoints, manage blog
-taxonomies (tags and categories), create draft posts with rich
-content, and publish drafts.  A simple rate limiter is included to
-respect Wix's limit of roughly 200 requests per minute per site.  A
-generic retry wrapper is provided to handle transient network errors
-and server-side rate limiting responses (429 or 5xx).
+Este módulo implementa interações de baixo nível com a API REST do Wix.
+As funções aqui definidas realizam uploads de mídia através dos endpoints
+de duas etapas ``/upload/url`` e ``/upload/complete``, gerenciam
+taxonomias de blog (tags e categorias), criam rascunhos de posts com
+conteúdo rico e publicam rascunhos. Um simples limitador de taxa está
+incluído para respeitar o limite do Wix de aproximadamente 200 requisições
+por minuto por site. Um wrapper genérico de retentativas é fornecido para
+lidar com erros de rede transitórios e respostas de limitação de taxa
+do lado do servidor (429 ou 5xx).
 
-Usage example::
+Exemplo de uso::
 
     from src.extractors.wordpress_extractor import extract_posts_from_csv
     from src.parsers.ricos_parser import convert_html_to_ricos, strip_html_nodes
@@ -22,7 +23,7 @@ Usage example::
     posts = extract_posts_from_csv("posts.csv")
     for post in posts:
         ricos = convert_html_to_ricos(post["ContentHTML"])
-        # upload cover image if present
+        # fazer upload da imagem de capa, se presente
         if post.get("FeaturedImageUrl"):
             post["FeaturedImageUrl"] = upload_image_from_url(cfg, post["FeaturedImageUrl"])
         post["CategoryIds"] = get_or_create_terms(cfg, "categories", post.get("Categories"))
@@ -37,7 +38,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 import requests
 

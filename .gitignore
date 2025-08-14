@@ -145,8 +145,6 @@ cython_debug/
 /.vscode
 /plan_refact.md
 /relatorio_analise.md
-/docs/*
-
 
 config/*
 docs/*
