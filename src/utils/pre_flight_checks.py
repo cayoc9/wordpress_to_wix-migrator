@@ -32,7 +32,7 @@ def run_wix_pre_flight_checks(config: dict):
     }
     
     # Check 1: API Key validity and Site ID correctness by calling a simple endpoint
-    apps_url = f"{base_url}/v1/apps"
+    apps_url = f"{base_url}/apps/v1/apps"
     try:
         response = requests.get(apps_url, headers=headers, timeout=10)
         response.raise_for_status()
