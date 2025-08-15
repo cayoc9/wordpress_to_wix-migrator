@@ -10,3 +10,5 @@ ERROR: Migration aborted.
 INFO: Starting WordPress to Wix migration.
 ERROR: Pre-flight check failed: O Wix Site ID fornecido está incorreto. Verifique a Etapa A das instruções.
 ERROR: Migration aborted.
+INFO: Starting WordPress to Wix migration.
+ERROR: Wix credentials not found in config file.
