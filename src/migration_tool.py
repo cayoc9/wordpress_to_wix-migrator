@@ -34,11 +34,11 @@ import json
 
 class WordPressMigrationTool:
     """
-    Encapsulates all state and behavior required to migrate a set of
-    WordPress posts to Wix.  This class is responsible for reading
-    configuration, extracting posts, performing transformations and
-    migrating them.  Detailed success and failure information is
-    recorded using the :mod:`src.utils.errors` module.
+    Engloba todo o estado e comportamento necessários para migrar 
+    um conjunto de posts do WordPress para o Wix. Esta classe é 
+    responsável por ler a configuração, extrair posts, realizar transformações 
+    e migrá-los. Informações detalhadas de sucesso e falha são registradas 
+    utilizando o módulo :mod:`src.utils.errors`.
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None, *, config_file: Optional[str] = None) -> None:
