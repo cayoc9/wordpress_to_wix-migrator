@@ -10,3 +10,38 @@ ERROR: Migration aborted.
 INFO: Starting WordPress to Wix migration.
 ERROR: Pre-flight check failed: O Wix Site ID fornecido está incorreto. Verifique a Etapa A das instruções.
 ERROR: Migration aborted.
+INFO: Starting WordPress to Wix migration.
+ERROR: Wix credentials not found in config file.
+INFO: Starting WordPress to Wix migration.
+ERROR: Pre-flight check failed: O Wix Site ID fornecido está incorreto. Verifique a Etapa A das instruções.
+ERROR: Migration aborted.
+INFO: Starting WordPress to Wix migration.
+ERROR: Pre-flight check failed: Acesso negado: Verifique se a API Key tem as permissões necessárias e se o Site ID está correto.
+ERROR: Migration aborted.
+INFO: Starting WordPress to Wix migration.
+ERROR: Pre-flight check failed: Acesso negado pela API do Wix.
+Possíveis causas:
+1. A API Key não tem as permissões necessárias
+2. O Site ID pode estar incorreto
+3. O site pode não existir ou não estar acessível
+4. Você pode não ter acesso a este site
+
+Soluções:
+1. Verifique se o Site ID está correto (encontre-o na URL do painel Wix)
+2. Certifique-se de que você tem permissões de administrador no site
+3. Verifique se a API Key foi gerada para o site correto
+ERROR: Migration aborted.
+INFO: Starting WordPress to Wix migration.
+ERROR: Pre-flight check failed: Acesso negado pela API do Wix.
+Possíveis causas:
+1. A API Key não tem as permissões necessárias
+2. O Site ID pode estar incorreto
+3. O site pode não existir ou não estar acessível
+4. Você pode não ter acesso a este site
+
+Para soluções detalhadas, consulte o arquivo TROUBLESHOOTING.md
+Soluções rápidas:
+1. Verifique se o Site ID está correto (encontre-o na URL do painel Wix)
+2. Certifique-se de que você tem permissões de administrador no site
+3. Verifique se a API Key foi gerada para o site correto
+ERROR: Migration aborted.
