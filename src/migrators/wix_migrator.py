@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Callable, Dict, Iterable, List, Optional
+from typing import Callable, Dict, Iterable, List, Optional, Any
 
 import requests
 
@@ -70,14 +70,11 @@ def wix_headers(cfg: Dict[str, str]) -> Dict[str, str]:
     """
     Construct the default headers required for Wix API requests.
 
-    :param cfg: A configuration dictionary with keys ``api_key`` and
-                ``site_id``.
-    :return: A dictionary of headers including Authorization and
-             wix-site-id.
+    :param cfg: A configuration dictionary with the ``access_token``.
+    :return: A dictionary of headers including Authorization.
     """
     return {
-        "Authorization": cfg["api_key"],
-        "wix-site-id": cfg["site_id"],
+        "Authorization": f"Bearer {cfg['access_token']}",
     }
 
 
@@ -117,6 +114,57 @@ def with_retries(fn: Callable[[], requests.Response], *, max_attempts: int = 5, 
                 raise
             time.sleep(base_delay * (2 ** attempt))
             attempt += 1
+
+
+
+
+
+###############################################################################
+# Member helpers
+###############################################################################
+
+def list_members(cfg: Dict[str, str]) -> List[Dict[str, Any]]:
+    """
+    Lists all members for the Wix site.
+
+    :param cfg: Wix configuration dictionary with an ``access_token``.
+    :return: A list of member objects.
+    """
+    _limiter.wait()
+    def do_request() -> requests.Response:
+        return requests.get(
+            f"{cfg['base_url']}/members/v1/members",
+            headers=wix_headers(cfg),
+        )
+    try:
+        resp = with_retries(do_request)
+        return resp.json().get("members", [])
+    except requests.HTTPError as e:
+        print(f"Failed to list members: {e.response.text}")
+        return []
+
+def create_member(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
+    """
+    Creates a new member on the Wix site.
+
+    :param cfg: Wix configuration dictionary with an ``access_token``.
+    :param email: The email address for the new member.
+    :return: The new member object, or ``None`` on failure.
+    """
+    _limiter.wait()
+    def do_request() -> requests.Response:
+        return requests.post(
+            f"{cfg['base_url']}/members/v1/members",
+            headers={**wix_headers(cfg), "Content-Type": "application/json"},
+            json={"member": {"loginEmail": email}},
+        )
+    try:
+        resp = with_retries(do_request)
+        return resp.json().get("member")
+    except requests.HTTPError as e:
+        print(f"Failed to create member: {e.response.text}")
+        # Re-raise the exception so it can be handled upstream
+        raise
 
 
 ###############################################################################
@@ -226,9 +274,9 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
     then creates any missing terms.
 
     :param cfg: Wix configuration dictionary.
-    :param kind: Either ``"tags"`` or ``"categories"``.
+    :param kind: Either "tags" or "categories".
     :param labels: An iterable of term names (strings).
-    :return: A list of term IDs corresponding to the supplied labels.
+    :return: A list of term IDs corresponding to the supplied labels, without duplicates.
     """
     ids: List[str] = []
     labels = [label.strip() for label in labels if label and label.strip()]
@@ -248,7 +296,10 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
     for label in labels:
         low = label.lower()
         if low in term_map:
-            ids.append(term_map[low])
+            term_id = term_map[low]
+            # Add to ids list only if it's not already present to avoid duplicates
+            if term_id not in ids:
+                ids.append(term_id)
         else:
             # Create a new term
             _limiter.wait()
@@ -260,7 +311,9 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
                 obj = resp.json().get("tag" if kind == "tags" else "category", {})
                 term_id = obj.get("id")
                 if term_id:
-                    ids.append(term_id)
+                    # Add to ids list only if it's not already present to avoid duplicates
+                    if term_id not in ids:
+                        ids.append(term_id)
                     term_map[low] = term_id
             except Exception:
                 continue
@@ -271,7 +324,7 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
 # Draft and publish helpers
 ###############################################################################
 
-def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str, Any], *, allow_html_iframe: bool = True) -> Dict[str, Any]:
+def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str, Any], member_id: str, *, allow_html_iframe: bool = True) -> Dict[str, Any]:
     """
     Create a draft blog post in Wix using the provided rich content.
 
@@ -283,6 +336,7 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
     :param post: Normalized post dictionary.
     :param ricos: Rich content object returned by
                   :func:`src.parsers.ricos_parser.convert_html_to_ricos`.
+    :param member_id: The ID of the member to be set as the author.
     :param allow_html_iframe: Whether to allow ``type: "html"`` nodes in
                               the payload.  If the Wix API rejects
                               HTML nodes, call this function again
@@ -296,6 +350,7 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
     body: Dict[str, Any] = {
         "draftPost": {
             "title": post.get("Title") or "",
+            "memberId": member_id,
             "richContent": ricos,
             "excerpt": (post.get("Excerpt") or "")[:3000],
             "coverMedia": None,
@@ -323,8 +378,7 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
         resp = with_retries(do_request)
         return resp.json()
     except requests.HTTPError as e:
-        # If we allowed HTML and the Wix API rejects the request (400) we
-        # rethrow and let the caller decide whether to strip HTML and retry.
+        # Re-raise the exception so it can be handled upstream
         raise
 
 

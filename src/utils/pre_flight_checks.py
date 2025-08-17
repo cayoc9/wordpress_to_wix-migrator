@@ -19,38 +19,40 @@ def run_wix_pre_flight_checks(config: dict):
     """
     print("[INFO] Running pre-flight checks...")
     
-    site_id = config.get("wix", {}).get("site_id")
-    api_key = config.get("wix", {}).get("api_key")
+    access_token = config.get("wix", {}).get("access_token")
     base_url = config.get("wix", {}).get("base_url", "https://www.wixapis.com")
 
-    if not site_id or not api_key:
-        raise PreFlightCheckError("Wix Site ID ou API Key não encontrados no arquivo de configuração.")
+    if not access_token:
+        raise PreFlightCheckError("Token de acesso do Wix não encontrado no arquivo de configuração.")
 
     headers = {
-        "Authorization": api_key,
-        "wix-site-id": site_id,
+        "Authorization": f"Bearer {access_token}",
     }
     
-    # Check 1: API Key validity and Site ID correctness by calling a simple endpoint
-    apps_url = f"{base_url}/v1/apps"
+    # Check 1: Verify access token and Members API
+    members_url = f"{base_url}/members/v1/members"
     try:
-        response = requests.get(apps_url, headers=headers, timeout=10)
+        response = requests.get(members_url, headers=headers, timeout=10)
         response.raise_for_status()
     except requests.HTTPError as e:
         if e.response.status_code == 401:
-            raise PreFlightCheckError("A Wix API Key fornecida é inválida ou expirou. Verifique a Etapa B das instruções.")
-        elif e.response.status_code == 404:
-            raise PreFlightCheckError("O Wix Site ID fornecido está incorreto. Verifique a Etapa A das instruções.")
+            raise PreFlightCheckError("O token de acesso fornecido é inválido ou expirou.")
         else:
-            raise PreFlightCheckError(f"Erro inesperado ao verificar as credenciais: {e}")
+            raise PreFlightCheckError(f"Erro inesperado ao verificar a API de Membros: {e}")
     except requests.RequestException as e:
-        raise PreFlightCheckError(f"Erro de rede ao tentar se conectar com a API do Wix: {e}")
+        raise PreFlightCheckError(f"Erro de rede ao tentar se conectar com a API de Membros do Wix: {e}")
 
-    # Check 2: Wix Blog app installation
-    installed_apps = response.json().get("apps", [])
-    is_blog_installed = any(app.get("id") == WIX_BLOG_APP_ID for app in installed_apps)
-
-    if not is_blog_installed:
-        raise PreFlightCheckError("O aplicativo 'Wix Blog' não está instalado neste site. Por favor, adicione-o pela App Market do Wix para continuar.")
+    # Check 2: Verify Blog API
+    blog_url = f"{base_url}/blog/v3/blog"
+    try:
+        response = requests.get(blog_url, headers=headers, timeout=10)
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        if e.response.status_code == 404:
+            raise PreFlightCheckError("O aplicativo 'Wix Blog' não está instalado neste site ou a API do Blog não está acessível.")
+        else:
+            raise PreFlightCheckError(f"Erro inesperado ao verificar a API do Blog: {e}")
+    except requests.RequestException as e:
+        raise PreFlightCheckError(f"Erro de rede ao tentar se conectar com a API do Blog do Wix: {e}")
 
     print("[INFO] Pre-flight checks passed successfully.")
