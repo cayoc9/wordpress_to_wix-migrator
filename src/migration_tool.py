@@ -22,7 +22,7 @@ from typing import Dict, List, Optional
 from src.extractors.wordpress_extractor import extract_posts_from_csv, extract_posts_from_xml
 from src.parsers.ricos_parser import convert_html_to_ricos, strip_html_nodes
 from src.migrators.wix_migrator import (
-    upload_image_from_url,
+    import_image_from_url,
     get_or_create_terms,
     create_draft_post,
     publish_post,
@@ -224,9 +224,9 @@ class WordPressMigrationTool:
                     if dry_run:
                         self.log_message(f"Dry-run: would upload cover {post['FeaturedImageUrl']}")
                     else:
-                        new_url = upload_image_from_url(self.config["wix"], post["FeaturedImageUrl"])
-                        if new_url:
-                            post["FeaturedImageUrl"] = new_url
+                        media_id = import_image_from_url(self.config["wix"], post["FeaturedImageUrl"])
+                        if media_id:
+                            post["FeaturedImageId"] = media_id
                         else:
                             report_error("MEDIA_UPLOAD", post)
                             self.log_message(f"Failed to upload media for post '{slug}'", "ERROR")
@@ -247,7 +247,12 @@ class WordPressMigrationTool:
                         post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", post["Tags"][:30])
                 
                 # HTML conversion
-                ricos = convert_html_to_ricos(post.get("ContentHTML", ""), embed_strategy="html_iframe")
+                image_importer = lambda url: import_image_from_url(self.config["wix"], url)
+                ricos = convert_html_to_ricos(
+                    post.get("ContentHTML", ""), 
+                    embed_strategy="html_iframe",
+                    image_importer=image_importer if not dry_run else None
+                )
                 
                 # Create draft
                 if dry_run:

@@ -4,20 +4,48 @@ from urllib.parse import urlparse
 
 def extract_posts_from_csv(file_path):
     """
-    Extracts posts from a WordPress CSV export file.
+    Extracts and normalizes posts from a WordPress CSV export file.
 
     Args:
         file_path (str): The path to the CSV file.
 
     Returns:
-        list: A list of dictionaries, where each dictionary represents a post.
+        list: A list of dictionaries, where each dictionary represents a post
+              with a normalized structure.
     """
     posts = []
     try:
         with open(file_path, mode='r', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                posts.append(row)
+                post = {
+                    'ID': row.get('ID'),
+                    'Title': row.get('Title'),
+                    'ContentHTML': row.get('Content'),
+                    'Excerpt': row.get('Excerpt'),
+                    'Date': row.get('Date'),
+                    'Post Type': row.get('Post Type'),
+                    'Permalink': row.get('Permalink'),
+                    'FeaturedImageUrl': row.get('Image URL', '').split('|')[0],
+                    'Categories': [cat.strip() for cat in row.get('Categorias', '').split(',') if cat.strip()],
+                    'Tags': [tag.strip() for tag in row.get('Tags', '').split(',') if tag.strip()],
+                    'Status': row.get('Status'),
+                    'Author ID': row.get('Author ID'),
+                    'Author Username': row.get('Author Username'),
+                    'Author Email': row.get('Author Email'),
+                    'Author First Name': row.get('Author First Name'),
+                    'Author Last Name': row.get('Author Last Name'),
+                    'Slug': row.get('Slug'),
+                    'Format': row.get('Format'),
+                    'Template': row.get('Template'),
+                    'Parent': row.get('Parent'),
+                    'Parent Slug': row.get('Parent Slug'),
+                    'Order': row.get('Order'),
+                    'Comment Status': row.get('Comment Status'),
+                    'Ping Status': row.get('Ping Status'),
+                    'Post Modified Date': row.get('Post Modified Date')
+                }
+                posts.append(post)
     except FileNotFoundError:
         print(f"Error: The file {file_path} was not found.")
     except Exception as e:

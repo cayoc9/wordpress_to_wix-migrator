@@ -174,92 +174,38 @@ def create_member(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
 _limiter = RateLimiter(180)  # Use a conservative default
 
 
-def create_upload_url(cfg: Dict[str, str], filename: str, mime_type: str) -> Dict[str, str]:
+
+
+
+def import_image_from_url(cfg: Dict[str, str], image_url: str) -> Optional[str]:
     """
-    Request a signed upload URL from Wix.  The signed URL is valid for
-    one use and is used to PUT the file contents directly to Wix storage.
+    Imports an image from a remote URL into the Wix Media Manager.
 
-    :param cfg: Wix configuration dictionary.
-    :param filename: Name of the file to be uploaded.
-    :param mime_type: MIME type of the file (e.g., 'image/jpeg').
-    :return: A dictionary containing keys ``uploadUrl`` and ``uploadToken``.
-    """
-    _limiter.wait()
-    def do_request() -> requests.Response:
-        return requests.post(
-            f"{cfg['base_url']}/media/v1/files/upload/url",
-            headers={**wix_headers(cfg), "Content-Type": "application/json"},
-            json={"fileName": filename, "mimeType": mime_type},
-        )
-    resp = with_retries(do_request)
-    return resp.json()
-
-
-def upload_bytes_to_signed_url(url: str, data: bytes, mime_type: str) -> None:
-    """
-    Upload binary data to a Wix-signed URL.  This step does not use the
-    Wix API; instead, it performs a direct PUT against the provided
-    pre-signed URL.
-
-    :param url: The signed upload URL returned by :func:`create_upload_url`.
-    :param data: The raw bytes of the file to upload.
-    :param mime_type: The MIME type to use in the Content-Type header.
-    :raises requests.HTTPError: if the PUT fails.
-    """
-    # No rate limiting needed for the PUT request – it goes directly to Wix
-    resp = requests.put(url, data=data, headers={"Content-Type": mime_type})
-    resp.raise_for_status()
-
-
-def finalize_upload(cfg: Dict[str, str], upload_token: str) -> Dict[str, str]:
-    """
-    Notify Wix that the upload has completed, returning metadata about the
-    uploaded file.
-
-    :param cfg: Wix configuration dictionary.
-    :param upload_token: The token returned by :func:`create_upload_url`.
-    :return: A JSON object describing the uploaded file, including its URL.
-    """
-    _limiter.wait()
-    def do_request() -> requests.Response:
-        return requests.post(
-            f"{cfg['base_url']}/media/v1/files/upload/complete",
-            headers={**wix_headers(cfg), "Content-Type": "application/json"},
-            json={"uploadToken": upload_token},
-        )
-    resp = with_retries(do_request)
-    return resp.json()
-
-
-def upload_image_from_url(cfg: Dict[str, str], image_url: str) -> Optional[str]:
-    """
-    Download an image from a remote URL and upload it to Wix Media Manager.
-
-    This helper performs all three steps (generate upload URL, PUT data,
-    finalize upload).  On success it returns the Wix-hosted URL of the
-    uploaded image.  Failures are logged and ``None`` is returned.
+    This function uses the Import File endpoint, which is the recommended way
+    to add external media to Wix.
 
     :param cfg: Wix configuration dictionary.
     :param image_url: The source URL of the image.
-    :return: The Wix URL of the uploaded file, or ``None`` on error.
+    :return: The Wix media ID of the imported file, or ``None`` on error.
     """
     if not image_url:
         return None
+    
+    _limiter.wait()
+    
+    def do_request() -> requests.Response:
+        return requests.post(
+            f"{cfg['base_url']}/site-media/v1/files/import",
+            headers={**wix_headers(cfg), "Content-Type": "application/json"},
+            json={"url": image_url, "mediaType": "IMAGE"},
+        )
+    
     try:
-        # Download the image data
-        r = requests.get(image_url, stream=True, timeout=30)
-        r.raise_for_status()
-        data = r.content
-        # Determine a filename and MIME type; fallback to .jpg if unknown
-        filename = image_url.split("/")[-1].split("?")[0] or "image.jpg"
-        mime_type = r.headers.get("Content-Type", "image/jpeg")
-        upload_info = create_upload_url(cfg, filename, mime_type)
-        upload_bytes_to_signed_url(upload_info["uploadUrl"], data, mime_type)
-        completed = finalize_upload(cfg, upload_info["uploadToken"])
-        # Prefer the URL in the completed payload, falling back to the ID
-        file_obj = completed.get("file", {})
-        return file_obj.get("url") or file_obj.get("id")
-    except Exception:
+        resp = with_retries(do_request)
+        file_obj = resp.json().get("file", {})
+        return file_obj.get("id")
+    except Exception as e:
+        print(f"Failed to import image from {image_url}: {e}")
         return None
 
 
@@ -353,7 +299,6 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
             "memberId": member_id,
             "richContent": ricos,
             "excerpt": (post.get("Excerpt") or "")[:3000],
-            "coverMedia": None,
             "categoryIds": post.get("CategoryIds", []),
             "tagIds": post.get("TagIds", []),
             "slug": post.get("Slug") or "",
@@ -364,8 +309,14 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
         }
     }
     # Cover image
-    if post.get("FeaturedImageUrl"):
-        body["draftPost"]["coverMedia"] = {"image": {"src": post["FeaturedImageUrl"]}}
+    if post.get("FeaturedImageId"):
+        body["draftPost"]["media"] = {
+            "wixMedia": {
+                "image": {"id": post["FeaturedImageId"]}
+            },
+            "displayed": True,
+            "custom": True
+        }
 
     _limiter.wait()
     def do_request() -> requests.Response:

@@ -28,6 +28,20 @@ YOUTUBE_PATTERNS = [
 ]
 YOUTUBE_RX = re.compile("|".join(YOUTUBE_PATTERNS))
 
+RICOS_NODE_TYPE_MAP = {
+    "text": 0,
+    "paragraph": 1,
+    "heading": 2,
+    "bulleted-list": 3,
+    "numbered-list": 4,
+    "list-item": 5,
+    "blockquote": 6,
+    "code-block": 7,
+    "image": 8,
+    "html": 9,
+    "link": 10,
+}
+
 def extract_youtube_id(url: str) -> Optional[str]:
     """
     Attempt to extract a YouTube video ID from a given URL.
@@ -87,7 +101,7 @@ def link_block_for_video(video_id: str) -> Dict[str, Any]:
         "data": {"thumbnail": thumb},
     }
 
-def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe") -> Dict[str, Any]:
+def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", image_importer: Optional[Callable[[str], Optional[str]]] = None) -> Dict[str, Any]:
     """
     Convert raw HTML into a Ricos (Wix Rich Content) structure.
 
@@ -122,8 +136,8 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe") -> 
         text = (text or "").strip()
         if text:
             nodes.append({
-                "type": "paragraph",
-                "nodes": [{"type": "text", "text": text, "marks": []}],
+                "type": RICOS_NODE_TYPE_MAP["paragraph"],
+                "nodes": [{"type": RICOS_NODE_TYPE_MAP["text"], "text": text, "marks": []}],
             })
 
     for el in soup.recursiveChildGenerator():
@@ -136,9 +150,12 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe") -> 
             text = el.get_text(strip=True)
             if text:
                 nodes.append({
-                    "type": "heading",
+                    "type": RICOS_NODE_TYPE_MAP["heading"],
                     "data": {"level": level},
-                    "nodes": [{"type": "text", "text": text, "marks": []}],
+                    "nodes": [{
+                        "type": RICOS_NODE_TYPE_MAP["paragraph"],
+                        "nodes": [{"type": RICOS_NODE_TYPE_MAP["text"], "text": text, "marks": []}]
+                    }],
                 })
         elif name == "p":
             txt = el.get_text(" ", strip=True)
@@ -148,58 +165,75 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe") -> 
             items: List[Dict[str, Any]] = []
             for li in el.find_all("li", recursive=False):
                 items.append({
-                    "type": "list-item",
+                    "type": RICOS_NODE_TYPE_MAP["list-item"],
                     "nodes": [
                         {
-                            "type": "text",
-                            "text": li.get_text(" ", strip=True),
-                            "marks": [],
+                            "type": RICOS_NODE_TYPE_MAP["paragraph"],
+                            "nodes": [
+                                {
+                                    "type": RICOS_NODE_TYPE_MAP["text"],
+                                    "text": li.get_text(" ", strip=True),
+                                    "marks": [],
+                                }
+                            ]
                         }
                     ],
                 })
             nodes.append({
-                "type": "bulleted-list" if name == "ul" else "numbered-list",
+                "type": RICOS_NODE_TYPE_MAP["bulleted-list"] if name == "ul" else RICOS_NODE_TYPE_MAP["numbered-list"],
                 "nodes": items,
             })
         elif name == "blockquote":
             txt = el.get_text(" ", strip=True)
             if txt:
                 nodes.append({
-                    "type": "blockquote",
-                    "nodes": [{"type": "text", "text": txt, "marks": []}],
+                    "type": RICOS_NODE_TYPE_MAP["blockquote"],
+                    "nodes": [{
+                        "type": RICOS_NODE_TYPE_MAP["paragraph"],
+                        "nodes": [{"type": RICOS_NODE_TYPE_MAP["text"], "text": txt, "marks": []}]
+                    }],
                 })
         elif name == "pre":
             code = el.get_text("\n", strip=False)
             nodes.append({
-                "type": "code-block",
-                "nodes": [{"type": "text", "text": code, "marks": []}],
+                "type": RICOS_NODE_TYPE_MAP["code-block"],
+                "nodes": [{"type": RICOS_NODE_TYPE_MAP["text"], "text": code, "marks": []}],
             })
         elif name == "img":
             src = el.get("src")
-            alt = el.get("alt") or ""
-            if src:
-                nodes.append({
-                    "type": "image",
-                    "data": {"src": src, "alt": alt},
-                    "nodes": [],
-                })
+            if src and image_importer:
+                media_id = image_importer(src)
+                if media_id:
+                    nodes.append({
+                        "type": RICOS_NODE_TYPE_MAP["image"],
+                        "nodes": [],
+                        "imageData": {
+                            "containerData": {
+                                "width": {"size": "CONTENT"},
+                                "alignment": "CENTER"
+                            },
+                            "image": {
+                                "src": {"id": media_id}
+                            }
+                        }
+                    })
         elif name == "iframe":
             src = el.get("src")
             vid = extract_youtube_id(src or "")
             if vid and embed_strategy == "html_iframe":
-                nodes.append({"type": "html", "data": {"html": iframe_html_for_video(vid)}})
+                nodes.append({"type": RICOS_NODE_TYPE_MAP["html"], "data": {"html": iframe_html_for_video(vid)}})
             elif vid:
                 nodes.append(link_block_for_video(vid))
             else:
                 if src:
                     nodes.append({
-                        "type": "paragraph",
+                        "type": RICOS_NODE_TYPE_MAP["paragraph"],
                         "nodes": [
                             {
-                                "type": "link",
+                                "type": RICOS_NODE_TYPE_MAP["link"],
                                 "data": {"url": src},
                                 "nodes": [
-                                    {"type": "text", "text": src, "marks": []}
+                                    {"type": RICOS_NODE_TYPE_MAP["text"], "text": src, "marks": []}
                                 ],
                             }
                         ],
