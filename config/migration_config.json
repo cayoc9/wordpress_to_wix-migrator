@@ -7,6 +7,6 @@
     "wordpress_domain": "",
     "wix_site_url": "",
     "dry_run": false,
-    "limit": null
+    "limit": 3
   }
 }

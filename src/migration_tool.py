@@ -20,7 +20,7 @@ import os
 from typing import Dict, List, Optional
 
 from src.extractors.wordpress_extractor import extract_posts_from_csv, extract_posts_from_xml
-from src.parsers.ricos_parser import convert_html_to_ricos, strip_html_nodes
+from src.parsers.ricos_parser import convert_html_to_ricos
 from src.migrators.wix_migrator import (
     import_image_from_url,
     get_or_create_terms,
@@ -135,6 +135,11 @@ class WordPressMigrationTool:
             slug = post.get("Slug") or ""
             self.log_message(f"Migrating post '{slug}'")
 
+            # Print HTML content for debugging
+            print(f"DEBUG: Post '{slug}' HTML content:")
+            print(post.get("ContentHTML", ""))
+            print("---")
+
             author_email = post.get("Author Email")
             member_id = None
 
@@ -247,12 +252,16 @@ class WordPressMigrationTool:
                         post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", post["Tags"][:30])
                 
                 # HTML conversion
+                print(f"DEBUG: Converting HTML to Ricos for post '{slug}'")
                 image_importer = lambda url: import_image_from_url(self.config["wix"], url)
                 ricos = convert_html_to_ricos(
                     post.get("ContentHTML", ""), 
                     embed_strategy="html_iframe",
                     image_importer=image_importer if not dry_run else None
                 )
+                print(f"DEBUG: Ricos content for post '{slug}':")
+                print(ricos)
+                print("---")
                 
                 # Create draft
                 if dry_run:
@@ -268,19 +277,9 @@ class WordPressMigrationTool:
                         )
                     except Exception as e:
                         error_details = e.response.text if hasattr(e, "response") else str(e)
-                        if hasattr(e, "response") and e.response.status_code == 400:
-                            ricos_no_html = strip_html_nodes(json.loads(json.dumps(ricos)))
-                            try:
-                                draft_resp = create_draft_post(self.config["wix"], post, ricos_no_html, allow_html_iframe=False, member_id=member_id)
-                            except Exception as e2:
-                                error_details_2 = e2.response.text if hasattr(e2, "response") else str(e2)
-                                report_error("WIX_DRAFT_400", post, e2)
-                                self.log_message(f"Failed to create draft for post '{slug}' after stripping HTML: {error_details_2}", "ERROR")
-                                continue
-                        else:
-                            report_error("WIX_NETWORK", post, e)
-                            self.log_message(f"Network error creating draft for post '{slug}': {error_details}", "ERROR")
-                            continue
+                        report_error("WIX_NETWORK", post, e)
+                        self.log_message(f"Network error creating draft for post '{slug}': {error_details}", "ERROR")
+                        continue
                 
                 draft_id = (draft_resp.get("draftPost") or {}).get("id")
                 if not draft_id:
