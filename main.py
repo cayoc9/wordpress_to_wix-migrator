@@ -35,13 +35,12 @@ def main():
     posts = []
     if csv_files:
         csv_path = csv_files[0]
-        tool.log_message(f"Extracting posts from CSV {csv_path}")
+        # Avoid duplicate logs; extraction method logs source details
         posts = tool.extract_posts(csv_path=csv_path)
 
     # If no posts were found in the CSV, try the XML file
     if not posts and xml_files:
         xml_path = xml_files[0]
-        tool.log_message(f"No posts found in CSV, trying XML {xml_path}")
         posts = tool.extract_posts(xml_path=xml_path)
 
     if not posts:

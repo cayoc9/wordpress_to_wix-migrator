@@ -73,9 +73,22 @@ def wix_headers(cfg: Dict[str, str]) -> Dict[str, str]:
     :param cfg: A configuration dictionary with the ``access_token``.
     :return: A dictionary of headers including Authorization.
     """
-    return {
-        "Authorization": f"Bearer {cfg['access_token']}",
-    }
+    api_key = cfg.get("api_key") or cfg.get("apiKey") or ""
+    access_token = cfg.get("access_token") or cfg.get("accessToken") or ""
+    headers: Dict[str, str] = {}
+    if api_key:
+        # API Keys use raw value in Authorization header (no Bearer prefix)
+        headers["Authorization"] = api_key
+    elif access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+    # Add site-scoped header when available. Many Wix REST endpoints require it.
+    site_id = cfg.get("site_id") or cfg.get("wix_site_id") or cfg.get("siteId")
+    if site_id:
+        headers["wix-site-id"] = site_id
+    account_id = cfg.get("account_id") or cfg.get("wix_account_id") or cfg.get("accountId")
+    if account_id:
+        headers["wix-account-id"] = account_id
+    return headers
 
 
 def with_retries(fn: Callable[[], requests.Response], *, max_attempts: int = 5, base_delay: float = 0.7) -> requests.Response:

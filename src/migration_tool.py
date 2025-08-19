@@ -58,6 +58,8 @@ class WordPressMigrationTool:
         config["wix"].setdefault("instance_id", os.getenv("WIX_INSTANCE_ID", ""))
         config["wix"].setdefault("access_token", "")
         config["wix"].setdefault("member_id", "")
+        # Site-scoped header support
+        config["wix"].setdefault("site_id", os.getenv("WIX_SITE_ID", ""))
         config["wix"].setdefault("base_url", "https://www.wixapis.com")
 
         config.setdefault("migration", {})

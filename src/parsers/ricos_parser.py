@@ -6,7 +6,7 @@ official Wix REST API.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Callable
 
 import requests
 
@@ -52,14 +52,13 @@ def convert_html_to_ricos(
     if not html or not html.strip():
         return {"nodes": []}
 
-    # Truncate HTML if it exceeds Wix's limit of 10000 characters
-    if len(html) > 10000:
-        print(f"WARNING: HTML content is {len(html)} characters, truncating to 10000 characters")
-        html = html[:10000]
+    # Prefer not to truncate here. We'll attempt API conversion first; if it fails,
+    # we fall back to a local HTML→Ricos converter without hard cuts.
 
     api_url = f"{cfg['base_url']}/ricos/v1/ricos-document/convert/to-ricos"
     
-    # A comprehensive list of plugins based on API schema to support most content
+    # Use the documented payload shape for this endpoint: { html, options: { plugins } }
+    # Keep a broad plugin set that covers common content types.
     enabled_plugins = [
         "TABLE", "HEADING", "IMAGE", "LINK", "VIDEO", "HTML", "TEXT_COLOR",
         "TEXT_HIGHLIGHT", "LINE_SPACING", "SPOILER", "POLL", "MENTIONS",
@@ -83,35 +82,86 @@ def convert_html_to_ricos(
         # Execute the request with the project's standard retry logic.
         response = with_retries(do_request)
         ricos_response = response.json()
-        # The actual Ricos document is nested under the 'document' key
-        return ricos_response.get("document", {"nodes": []})
+        # The Ricos document may be under 'document' or directly returned
+        doc = ricos_response.get("document") if isinstance(ricos_response, dict) else None
+        if isinstance(doc, dict) and "nodes" in doc:
+            return doc
+        if isinstance(ricos_response, dict) and "nodes" in ricos_response:
+            return ricos_response
+        # Fallback to local conversion if shape is unexpected
+        return _local_html_to_ricos(html)
 
     except requests.exceptions.HTTPError as e:
         print(f"Failed to convert HTML via Wix API after multiple retries. Error: {e}")
         if e.response:
             print(f"Response body: {e.response.text}")
-        # Fallback: return a simple Ricos document with the HTML as a single text node
-        # This ensures the migration can continue even if the API fails
-        return {
-            "nodes": [
-                {
-                    "type": "PARAGRAPH",
-                    "nodes": [
-                        {
-                            "type": "TEXT",
-                            "text": "Content could not be converted to Ricos format. Displaying raw HTML:",
-                            "bold": True
-                        }
-                    ]
-                },
-                {
-                    "type": "PARAGRAPH",
-                    "nodes": [
-                        {
-                            "type": "TEXT",
-                            "text": html[:5000] + ("..." if len(html) > 5000 else "")  # Limit size
-                        }
-                    ]
-                }
-            ]
-        }
+        # Fallback: best-effort local conversion to avoid raw-HTML text-only content
+        return _local_html_to_ricos(html)
+
+
+def _local_html_to_ricos(html: str) -> Dict[str, Any]:
+    """Very simple HTML→Ricos converter using BeautifulSoup.
+
+    Maps common tags to PARAGRAPH/TEXT and HEADING nodes, and converts links
+    to inline text with the URL. Images are represented as text placeholders
+    to avoid invalid schema when no media ID is available.
+    """
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html or "", "html.parser")
+    nodes: list[dict] = []
+
+    def add_paragraph(text: str) -> None:
+        text = (text or "").strip()
+        if not text:
+            return
+        # Split on newlines to avoid giant text nodes
+        for piece in [p for p in text.splitlines() if p.strip()]:
+            nodes.append({
+                "type": "PARAGRAPH",
+                "nodes": [{"type": "TEXT", "text": piece}]
+            })
+
+    # Walk only top-level block elements; fallback to full text if none
+    block_tags = {"p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "blockquote"}
+    found_any = False
+    for el in soup.body.children if soup.body else soup.children:
+        if getattr(el, "name", None) in block_tags:
+            found_any = True
+            name = el.name.lower()
+            if name.startswith("h") and len(name) == 2 and name[1].isdigit():
+                lvl = int(name[1])
+                text = el.get_text(" ", strip=True)
+                nodes.append({
+                    "type": "HEADING",
+                    "level": max(1, min(6, lvl)),
+                    "nodes": [{"type": "TEXT", "text": text}],
+                })
+            elif name == "blockquote":
+                text = el.get_text(" ", strip=True)
+                nodes.append({
+                    "type": "BLOCKQUOTE",
+                    "nodes": [{"type": "PARAGRAPH", "nodes": [{"type": "TEXT", "text": text}]}]
+                })
+            elif name == "li":
+                add_paragraph(el.get_text(" ", strip=True))
+            else:
+                # p and everything else here
+                # Inline anchors: append " (url)" after text to preserve information
+                for a in el.find_all("a"):
+                    href = a.get("href")
+                    if href:
+                        a.string = (a.get_text(strip=True) or href) + f" ({href})"
+                # Images become placeholders
+                for img in el.find_all("img"):
+                    alt = img.get("alt") or "imagem"
+                    src = img.get("src") or ""
+                    img.replace_with(soup.new_string(f"[Imagem: {alt}] {src}".strip()))
+                add_paragraph(el.get_text(" ", strip=True))
+
+    if not found_any:
+        # Fallback to whole-document text if no block elements detected
+        text = soup.get_text(" ", strip=True)
+        add_paragraph(text)
+
+    return {"nodes": nodes or [{"type": "PARAGRAPH", "nodes": [{"type": "TEXT", "text": ""}]}]}
