@@ -1,46 +1,312 @@
-"""
-Ricos parser for converting HTML into the Wix Rich Content format.
-
-This module is a copy of the standalone ``ricos_parser.py`` at the
-repository root.  It is provided here to satisfy the import path
-``src.parsers.ricos_parser``.  See the root-level module for detailed
-documentation.
-"""
-
-from __future__ import annotations
-
 import re
-from typing import Any, Dict, List, Optional, Callable
-from bs4 import BeautifulSoup, NavigableString
 import uuid
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+from bs4 import BeautifulSoup, NavigableString
 
 __all__ = [
     "convert_html_to_ricos",
 ]
 
+def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
+    """
+    Extracts text content from a BeautifulSoup element and applies Ricos decorations
+    based on inline HTML tags (strong, em, a, span).
+    """
+    text_nodes = []
+    for child in element.contents:
+        if isinstance(child, NavigableString):
+            if str(child).strip():
+                text_nodes.append({
+                    "type": "TEXT",
+                    "textData": {
+                        "text": str(child),
+                        "decorations": []
+                    }
+                })
+        elif child.name in ["strong", "b"]:
+            # Apply BOLD decoration to all text nodes within this strong/b tag
+            for text_node in _get_text_nodes_with_decorations(child):
+                text_node["textData"]["decorations"].append({"type": "BOLD"})
+                text_nodes.append(text_node)
+        elif child.name in ["em", "i"]:
+            # Apply ITALIC decoration
+            for text_node in _get_text_nodes_with_decorations(child):
+                text_node["textData"]["decorations"].append({"type": "ITALIC"})
+                text_nodes.append(text_node)
+        elif child.name == "a":
+            # Apply LINK decoration
+            href = child.get("href")
+            if href:
+                for text_node in _get_text_nodes_with_decorations(child):
+                    text_node["textData"]["decorations"].append({
+                        "type": "LINK",
+                        "linkData": {"url": href}
+                    })
+                    text_nodes.append(text_node)
+            else: # If <a> tag has no href, just process its children
+                text_nodes.extend(_get_text_nodes_with_decorations(child))
+        elif child.name == "span":
+            # For span, just process its children, ignoring its own styling
+            text_nodes.extend(_get_text_nodes_with_decorations(child))
+        elif child.name == "br":
+            # Line breaks within text content are represented as a space for now.
+            # A more advanced solution might split text nodes and insert LINE_BREAK nodes.
+            text_nodes.append({
+                "type": "TEXT",
+                "textData": {
+                    "text": " ",
+                    "decorations": []
+                }
+            })
+        else:
+            # For any other unexpected tag within what should be inline content,
+            # try to extract its text content and add it as a plain text node.
+            if child.get_text(strip=True):
+                text_nodes.append({
+                    "type": "TEXT",
+                    "textData": {
+                        "text": child.get_text(),
+                        "decorations": []
+                    }
+                })
+    return text_nodes
+
+def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[Callable[[str], Optional[str]]]) -> List[Dict[str, Any]]:
+    """
+    Converts a single BeautifulSoup HTML element (expected to be a block-level element)
+    into a list of Ricos nodes.
+    """
+    ricos_nodes = []
+
+    if isinstance(element, NavigableString):
+        # NavigableString should be handled by the caller (convert_html_to_ricos or _get_text_nodes_with_decorations)
+        return ricos_nodes
+
+    if element.name == "p":
+        paragraph_content_nodes = _get_text_nodes_with_decorations(element)
+        if paragraph_content_nodes:
+            ricos_nodes.append({
+                "type": "PARAGRAPH",
+                "nodes": paragraph_content_nodes,
+                "paragraphData": {}
+            })
+    elif element.name and re.match(r"h[1-6]", element.name):
+        heading_level_map = {
+            "h1": "HEADING_ONE", "h2": "HEADING_TWO", "h3": "HEADING_THREE",
+            "h4": "HEADING_FOUR", "h5": "HEADING_FIVE", "h6": "HEADING_SIX"
+        }
+        heading_type = heading_level_map.get(element.name, "HEADING_ONE")
+        heading_content_nodes = _get_text_nodes_with_decorations(element)
+        if heading_content_nodes:
+            ricos_nodes.append({
+                "type": "HEADING",
+                "nodes": heading_content_nodes,
+                "headingData": {"level": int(element.name[1])}
+            })
+    elif element.name == "img":
+        src = element.get("src")
+        alt = element.get("alt", "")
+        width = element.get("width")
+        height = element.get("height")
+
+        if src and image_importer:
+            media_id = image_importer(src)
+            if media_id:
+                image_data = {
+                    "containerData": {
+                        "width": {"size": "CONTENT"},
+                        "alignment": "CENTER"
+                    },
+                    "image": {
+                        "src": {"id": media_id},
+                        "altText": alt
+                    }
+                }
+                if width:
+                    try:
+                        image_data["image"]["width"] = int(width)
+                    except ValueError:
+                        pass
+                if height:
+                    try:
+                        image_data["image"]["height"] = int(height)
+                    except ValueError:
+                        pass
+                
+                ricos_nodes.append({
+                    "type": "IMAGE",
+                    "nodes": [],
+                    "imageData": image_data
+                })
+            else:
+                print(f"WARNING: Failed to import image from URL: {src}")
+        elif src:
+            print(f"WARNING: Image importer not provided or image source missing for: {src}")
+    elif element.name in ["ul", "ol"]:
+        list_type = "BULLETED_LIST" if element.name == "ul" else "ORDERED_LIST"
+        list_items = []
+        for li in element.find_all("li", recursive=False):
+            li_nodes = []
+            # Each LIST_ITEM must contain a PARAGRAPH node
+            paragraph_content_nodes = _get_text_nodes_with_decorations(li)
+            if paragraph_content_nodes:
+                li_nodes.append({
+                    "type": "PARAGRAPH",
+                    "nodes": paragraph_content_nodes,
+                    "paragraphData": {}
+                })
+            
+            # Handle nested lists within <li>
+            for nested_list in li.find_all(["ul", "ol"], recursive=False):
+                li_nodes.extend(_convert_html_element_to_ricos_nodes(nested_list, image_importer))
+
+            if li_nodes:
+                list_items.append({
+                    "type": "LIST_ITEM",
+                    "nodes": li_nodes,
+                    "listItemData": {"depth": 0, "indentation": 0} # Depth and indentation might need more complex logic for nested lists
+                })
+        if list_items:
+            ricos_nodes.append({
+                "type": list_type,
+                "nodes": list_items,
+                "listData": {}
+            })
+    elif element.name == "blockquote":
+        blockquote_content_nodes = []
+        # Blockquote must contain PARAGRAPH nodes
+        for child in element.children:
+            if isinstance(child, NavigableString) and child.strip():
+                blockquote_content_nodes.append({
+                    "type": "PARAGRAPH",
+                    "nodes": [{
+                        "type": "TEXT",
+                        "textData": {
+                            "text": str(child).strip(),
+                            "decorations": []
+                        }
+                    }],
+                    "paragraphData": {}
+                })
+            elif child.name:
+                # If it's a <p> inside a blockquote, process it as a paragraph.
+                if child.name == "p":
+                    blockquote_content_nodes.extend(_convert_html_element_to_ricos_nodes(child, image_importer))
+                else: # For other tags, just get their text content
+                    text_content = child.get_text(strip=True)
+                    if text_content:
+                        blockquote_content_nodes.append({
+                            "type": "PARAGRAPH",
+                            "nodes": [{
+                                "type": "TEXT",
+                                "textData": {
+                                    "text": text_content,
+                                    "decorations": []
+                                }
+                            }],
+                            "paragraphData": {}
+                        })
+        
+        if blockquote_content_nodes:
+            ricos_nodes.append({
+                "type": "BLOCKQUOTE",
+                "nodes": blockquote_content_nodes,
+                "blockquoteData": {"indentation": 0}
+            })
+    elif element.name == "br":
+        # <br> tags at the top level or directly under a block should be LINE_BREAK nodes
+        ricos_nodes.append({
+            "type": "LINE_BREAK",
+            "nodes": [],
+            "lineBreakData": {}
+        })
+    elif element.name in ["table", "tbody", "tr", "td", "caption"]:
+        # Tables are not directly supported in Ricos. Convert their text content to paragraphs.
+        text_content = element.get_text(separator=" ", strip=True) # Use separator to preserve some spacing
+        if text_content:
+            print(f"WARNING: HTML table element '{element.name}' not directly supported. Converting content to PARAGRAPH.")
+            ricos_nodes.append({
+                "type": "PARAGRAPH",
+                "nodes": [{
+                    "type": "TEXT",
+                    "textData": {
+                        "text": text_content,
+                        "decorations": []
+                    }
+                }],
+                "paragraphData": {}
+            })
+    else:
+        # For any other unhandled block-level tags, log a warning and try to extract text.
+        text_content = element.get_text(separator=" ", strip=True)
+        if text_content:
+            print(f"WARNING: Unhandled HTML tag '{element.name}'. Converting content to PARAGRAPH.")
+            ricos_nodes.append({
+                "type": "PARAGRAPH",
+                "nodes": [{
+                    "type": "TEXT",
+                    "textData": {
+                        "text": text_content,
+                        "decorations": []
+                    }
+                }],
+                "paragraphData": {}
+            })
+    return ricos_nodes
+
 def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", image_importer: Optional[Callable[[str], Optional[str]]] = None) -> Dict[str, Any]:
     """
-    Converte HTML para o formato Ricos do Wix usando HtmlNode para HTML bruto.
-    
-    Esta versão envia o HTML bruto como um bloco HTML embutido,
-    o que é suportado pela API do Wix Blog através do HtmlNode.
+    Converts HTML to Wix Ricos format by parsing HTML elements into native Ricos nodes.
+    This version aims to convert HTML tags like p, h1-h6, img, ul, ol, li, blockquote,
+    and apply inline text decorations for strong, em, and a.
     """
     print(f"DEBUG: convert_html_to_ricos called with HTML (length {len(html) if html else 0}): {html[:200] if html else ''}...")
-    
+
     if not html or not html.strip():
         print("DEBUG: HTML is empty, returning empty nodes")
         return {"nodes": []}
-    
-    # Criar um HtmlNode que contém o HTML bruto
-    # Isso é suportado pela API do Wix Blog
-    html_node = {
-        "type": "HTML",
-        "htmlData": {
-            "html": html,
-            "source": "HTML"
-        },
-        "id": str(uuid.uuid4())  # ID único para o node
-    }
-    
-    print(f"DEBUG: Created HTML node with raw HTML content")
-    return {"nodes": [html_node]}
+
+    soup = BeautifulSoup(html, "html.parser")
+    ricos_output_nodes = []
+
+    # Process direct children of the body or the soup itself if no body tag
+    # This loop should only call _convert_html_element_to_ricos_nodes for block-level elements
+    # or wrap NavigableStrings in paragraphs.
+    for child in soup.body.children if soup.body else soup.children:
+        if isinstance(child, NavigableString):
+            text = str(child).strip()
+            if text:
+                ricos_output_nodes.append({
+                    "type": "PARAGRAPH",
+                    "nodes": [{
+                        "type": "TEXT",
+                        "textData": {
+                            "text": text,
+                            "decorations": []
+                        }
+                    }],
+                    "paragraphData": {}
+                })
+        elif child.name in ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "img", "br", "table"]:
+            # These are block-level elements or elements that should result in a block-level Ricos node
+            ricos_output_nodes.extend(_convert_html_element_to_ricos_nodes(child, image_importer))
+        else:
+            # For any other unhandled top-level tags, log a warning and try to extract text.
+            text_content = child.get_text(separator=" ", strip=True)
+            if text_content:
+                print(f"WARNING: Unhandled top-level HTML tag '{child.name}'. Converting content to PARAGRAPH.")
+                ricos_output_nodes.append({
+                    "type": "PARAGRAPH",
+                    "nodes": [{
+                        "type": "TEXT",
+                        "textData": {
+                            "text": text_content,
+                            "decorations": []
+                        }
+                    }],
+                    "paragraphData": {}
+                })
+
+    print(f"DEBUG: Generated Ricos content (first 500 chars): {str(ricos_output_nodes)[:500]}...")
+    return {"nodes": ricos_output_nodes}
