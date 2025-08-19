@@ -1,6 +1,9 @@
 import csv
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
+from html import unescape
+
+from src.utils.categories import parse_categories_field
 
 def extract_posts_from_csv(file_path):
     """
@@ -27,7 +30,8 @@ def extract_posts_from_csv(file_path):
                     'Post Type': row.get('Post Type'),
                     'Permalink': row.get('Permalink'),
                     'FeaturedImageUrl': row.get('Image URL', '').split('|')[0],
-                    'Categories': [cat.strip() for cat in row.get('Categorias', '').split(',') if cat.strip()],
+                    # Normaliza categorias vindas do CSV (separadas por '|', corrigindo entidades HTML)
+                    'Categories': parse_categories_field(row.get('Categorias', '')),
                     'Tags': [tag.strip() for tag in row.get('Tags', '').split(',') if tag.strip()],
                     'Status': row.get('Status'),
                     'Author ID': row.get('Author ID'),
