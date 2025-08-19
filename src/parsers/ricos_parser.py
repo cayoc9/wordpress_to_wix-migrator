@@ -1,46 +1,117 @@
 """
-Ricos parser for converting HTML into the Wix Rich Content format.
-
-This module is a copy of the standalone ``ricos_parser.py`` at the
-repository root.  It is provided here to satisfy the import path
-``src.parsers.ricos_parser``.  See the root-level module for detailed
-documentation.
+Ricos parser for converting HTML into the Wix Rich Content format using the
+official Wix REST API.
 """
 
 from __future__ import annotations
 
-import re
-from typing import Any, Dict, List, Optional, Callable
-from bs4 import BeautifulSoup, NavigableString
-import uuid
+import json
+from typing import Any, Dict
+
+import requests
+
+# Import utilities from the wix_migrator to ensure consistent patterns
+from src.migrators.wix_migrator import RateLimiter, wix_headers, with_retries
 
 __all__ = [
     "convert_html_to_ricos",
 ]
 
-def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", image_importer: Optional[Callable[[str], Optional[str]]] = None) -> Dict[str, Any]:
+# Use a single rate limiter instance, consistent with wix_migrator.py
+_limiter = RateLimiter(180)
+
+
+def convert_html_to_ricos(
+    cfg: Dict[str, Any],
+    html: str,
+    *,
+    embed_strategy: str = "api",
+    image_importer: Optional[Callable[[str], Optional[str]]] = None,
+) -> Dict[str, Any]:
     """
-    Converte HTML para o formato Ricos do Wix usando HtmlNode para HTML bruto.
-    
-    Esta versão envia o HTML bruto como um bloco HTML embutido,
-    o que é suportado pela API do Wix Blog através do HtmlNode.
+    Converts an HTML string to the Wix Ricos format using the Wix REST API.
+
+    This function adheres to the project's standards for API calls, including
+    rate limiting, retry logic, and configuration handling as defined in
+    `wix_migrator.py`.
+
+    Args:
+        cfg: The application configuration dictionary, containing `base_url`
+             and `access_token`.
+        html: The raw HTML string to be converted.
+        embed_strategy: (Ignored) Kept for compatibility.
+        image_importer: (Ignored) Kept for compatibility.
+
+    Returns:
+        A dictionary representing the Ricos document structure.
+
+    Raises:
+        requests.exceptions.RequestException: For API or network-related errors
+                                            after all retries have failed.
     """
-    print(f"DEBUG: convert_html_to_ricos called with HTML (length {len(html) if html else 0}): {html[:200] if html else ''}...")
-    
     if not html or not html.strip():
-        print("DEBUG: HTML is empty, returning empty nodes")
         return {"nodes": []}
+
+    # Truncate HTML if it exceeds Wix's limit of 10000 characters
+    if len(html) > 10000:
+        print(f"WARNING: HTML content is {len(html)} characters, truncating to 10000 characters")
+        html = html[:10000]
+
+    api_url = f"{cfg['base_url']}/ricos/v1/ricos-document/convert/to-ricos"
     
-    # Criar um HtmlNode que contém o HTML bruto
-    # Isso é suportado pela API do Wix Blog
-    html_node = {
-        "type": "HTML",
-        "htmlData": {
-            "html": html,
-            "source": "HTML"
-        },
-        "id": str(uuid.uuid4())  # ID único para o node
-    }
-    
-    print(f"DEBUG: Created HTML node with raw HTML content")
-    return {"nodes": [html_node]}
+    # A comprehensive list of plugins based on API schema to support most content
+    enabled_plugins = [
+        "TABLE", "HEADING", "IMAGE", "LINK", "VIDEO", "HTML", "TEXT_COLOR",
+        "TEXT_HIGHLIGHT", "LINE_SPACING", "SPOILER", "POLL", "MENTIONS",
+        "LINK_PREVIEW", "LINK_BUTTON", "INDENT", "GIPHY", "GALLERY", "FILE",
+        "EMOJI", "DIVIDER", "COLLAPSIBLE_LIST", "CODE_BLOCK", "AUDIO", "ACTION_BUTTON"
+    ]
+
+    payload = {"html": html, "options": {"plugins": enabled_plugins}}
+
+    # This inner function is the unit of work for the retry wrapper.
+    def do_request() -> requests.Response:
+        # Wait before the request to respect rate limits.
+        _limiter.wait()
+        return requests.post(
+            api_url,
+            headers={**wix_headers(cfg), "Content-Type": "application/json"},
+            data=json.dumps(payload),
+        )
+
+    try:
+        # Execute the request with the project's standard retry logic.
+        response = with_retries(do_request)
+        ricos_response = response.json()
+        # The actual Ricos document is nested under the 'document' key
+        return ricos_response.get("document", {"nodes": []})
+
+    except requests.exceptions.HTTPError as e:
+        print(f"Failed to convert HTML via Wix API after multiple retries. Error: {e}")
+        if e.response:
+            print(f"Response body: {e.response.text}")
+        # Fallback: return a simple Ricos document with the HTML as a single text node
+        # This ensures the migration can continue even if the API fails
+        return {
+            "nodes": [
+                {
+                    "type": "PARAGRAPH",
+                    "nodes": [
+                        {
+                            "type": "TEXT",
+                            "text": "Content could not be converted to Ricos format. Displaying raw HTML:",
+                            "bold": True
+                        }
+                    ]
+                },
+                {
+                    "type": "PARAGRAPH",
+                    "nodes": [
+                        {
+                            "type": "TEXT",
+                            "text": html[:5000] + ("..." if len(html) > 5000 else "")  # Limit size
+                        }
+                    ]
+                }
+            ]
+        }

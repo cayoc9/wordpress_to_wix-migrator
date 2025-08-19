@@ -6,6 +6,8 @@ from html import unescape
 from src.utils.categories import parse_categories_field
 from src.utils.tags import parse_tags_field
 
+import sys
+
 def extract_posts_from_csv(file_path):
     """
     Extracts and normalizes posts from a WordPress CSV export file.
@@ -17,6 +19,17 @@ def extract_posts_from_csv(file_path):
         list: A list of dictionaries, where each dictionary represents a post
               with a normalized structure.
     """
+    # Increase the field size limit to handle large post content fields
+    # The default is 131072 (128KB)
+    max_int = sys.maxsize
+    while True:
+        # Decrease the max int value by half each time and try again
+        try:
+            csv.field_size_limit(max_int)
+            break
+        except OverflowError:
+            max_int = int(max_int / 2)
+
     posts = []
     try:
         with open(file_path, mode='r', encoding='utf-8') as csvfile:

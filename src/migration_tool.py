@@ -26,7 +26,7 @@ from src.migrators.wix_migrator import (
     get_or_create_terms,
     create_draft_post,
     publish_post,
-    list_members,
+    query_member_by_email,
     create_member,
 )
 from src.utils.errors import report_error, report_ok, ERRORS
@@ -88,6 +88,27 @@ class WordPressMigrationTool:
             f.write(f"{level}: {message}\n")
 
     def extract_posts(self, csv_path: Optional[str] = None, xml_path: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Extrai posts a partir de arquivos CSV e/ou XML e retorna uma lista combinada de dicionários representando cada post.
+
+        Descrição:
+        Esta função tenta extrair posts de um arquivo CSV (se fornecido e existir) e de um arquivo XML (se fornecido e existir).
+        Para cada fonte válida, chama a função auxiliar correspondente (extract_posts_from_csv ou extract_posts_from_xml)
+        e adiciona os resultados à lista de posts. Qualquer erro ocorrido durante a extração de uma fonte é capturado
+        e registrado via self.log_message, permitindo que a extração da outra fonte prossiga sem interromper a execução.
+
+        Parâmetros:
+            csv_path (Optional[str]): Caminho para o arquivo CSV contendo posts. Se None ou inexistente, é ignorado.
+            xml_path (Optional[str]): Caminho para o arquivo XML contendo posts. Se None ou inexistente, é ignorado.
+
+        Retorno:
+            List[Dict[str, Any]]: Lista combinada de dicionários de posts extraídos das fontes fornecidas.
+            Cada dicionário representa um post conforme definido pelas funções auxiliares de extração.
+
+        Comportamento adicional:
+            - Não lança exceções em caso de falha na extração de uma fonte; registra o erro e continua.
+            - Mantém a ordem de extração (primeiro CSV se presente, depois XML).
+        """
         posts: List[Dict[str, Any]] = []
         if csv_path and os.path.exists(csv_path):
             self.log_message(f"Extracting posts from CSV {csv_path}")
@@ -141,6 +162,13 @@ class WordPressMigrationTool:
             print("---")
 
             author_email = post.get("Author Email")
+
+            # Map specific author emails if needed
+            if author_email == "vitor@ebi.com.br":
+                mapped_email = "acesso@easygestor.com"
+                self.log_message(f"Mapping author email from {author_email} to {mapped_email}", level="INFO")
+                author_email = mapped_email
+
             member_id = None
 
             if author_email:
@@ -158,35 +186,31 @@ class WordPressMigrationTool:
                             with open(self.member_map_file, "w", encoding="utf-8") as f:
                                 json.dump(self.email_to_member_id_map, f)
                             self.log_message(f"Successfully created member {new_member.get('profile', {}).get('nickname', author_email)} for email: {author_email}", level="INFO")
-                        else:
-                            # This path is for other potential issues with create_member that don't raise HTTPError
-                            # If ALREADY_EXISTS is handled by create_member returning None, we should log it.
-                            # However, based on the error message, it seems to raise an exception.
-                            # Let's keep this for robustness.
-                            self.log_message(f"Failed to create member for email: {author_email} (create_member returned None). This should not happen with the new error handling. Skipping post.", level="ERROR")
-                            report_error("MEMBER_CREATION_FAILED", post)
-                            continue
+
                     except requests.exceptions.HTTPError as e:
-                         if e.response is not None and e.response.status_code == 409:
-                            # Handle 409 Conflict (e.g., member already exists)
-                            self.log_message(f"Member with email {author_email} already exists (409).", level="INFO")
-                            # Check if the member ID is already in the map
-                            if author_email in self.email_to_member_id_map:
-                                member_id = self.email_to_member_id_map[author_email]
-                                self.log_message(f"Using existing member ID for {author_email} from map.", level="INFO")
+                        if e.response is not None and e.response.status_code == 409:
+                            self.log_message(f"Member with email {author_email} already exists. Querying for ID...", level="INFO")
+                            existing_member = query_member_by_email(self.config["wix"], author_email)
+                            if existing_member:
+                                member_id = existing_member["id"]
+                                self.email_to_member_id_map[author_email] = member_id
+                                # Save the updated map
+                                os.makedirs(os.path.dirname(self.member_map_file), exist_ok=True)
+                                with open(self.member_map_file, "w", encoding="utf-8") as f:
+                                    json.dump(self.email_to_member_id_map, f)
+                                self.log_message(f"Found existing member ID for {author_email}: {member_id}", level="INFO")
                             else:
-                                self.log_message(f"Member ID for {author_email} not found in map. Skipping post.", level="WARNING")
-                                report_error("MEMBER_ALREADY_EXISTS_BUT_NOT_IN_MAP", post)
+                                self.log_message(f"API reported member {author_email} exists, but query could not find them. Skipping post.", level="ERROR")
+                                report_error("MEMBER_FETCH_FAILED", post)
                                 continue
-                         else:
-                            # Re-raise other HTTP errors
+                        else:
                             self.log_message(f"Failed to create member for email: {author_email}. Error: {e}. Skipping post.", level="ERROR")
                             report_error("MEMBER_CREATION_FAILED", post)
                             continue
-                    except Exception as e: # Catch other potential errors from create_member
-                         self.log_message(f"Unexpected error creating member for email: {author_email}. Error: {e}. Skipping post.", level="ERROR")
-                         report_error("MEMBER_CREATION_FAILED", post)
-                         continue
+                    except Exception as e:
+                        self.log_message(f"Unexpected error creating member for email: {author_email}. Error: {e}. Skipping post.", level="ERROR")
+                        report_error("MEMBER_CREATION_FAILED", post)
+                        continue
             else: # No author email in post
                 if self.default_member_id:
                     member_id = self.default_member_id
@@ -255,6 +279,7 @@ class WordPressMigrationTool:
                 print(f"DEBUG: Converting HTML to Ricos for post '{slug}'")
                 image_importer = lambda url: import_image_from_url(self.config["wix"], url)
                 ricos = convert_html_to_ricos(
+                    self.config["wix"],
                     post.get("ContentHTML", ""), 
                     embed_strategy="html_iframe",
                     image_importer=image_importer if not dry_run else None

@@ -21,7 +21,7 @@ Usage example::
     cfg = {"site_id": ..., "api_key": ..., "base_url": "https://www.wixapis.com"}
     posts = extract_posts_from_csv("posts.csv")
     for post in posts:
-        ricos = convert_html_to_ricos(post["ContentHTML"])
+        ricos = convert_html_to_ricos(cfg, post["ContentHTML"])
         # upload cover image if present
         if post.get("FeaturedImageUrl"):
             post["FeaturedImageUrl"] = upload_image_from_url(cfg, post["FeaturedImageUrl"])
@@ -167,6 +167,39 @@ def create_member(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
         raise
 
 
+def query_member_by_email(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
+    """
+    Queries for a member by their login email using the v1/members/query endpoint.
+
+    :param cfg: Wix configuration dictionary.
+    :param email: The email to query for.
+    :return: The member object if found, otherwise None.
+    """
+    _limiter.wait()
+    query = {
+        "query": {
+            "filter": {
+                "loginEmail": email
+            }
+        }
+    }
+    def do_request() -> requests.Response:
+        return requests.post(
+            f"{cfg['base_url']}/members/v1/members/query",
+            headers={**wix_headers(cfg), "Content-Type": "application/json"},
+            json=query,
+        )
+    try:
+        resp = with_retries(do_request)
+        members = resp.json().get("members", [])
+        if members:
+            return members[0]  # Return the first member found
+        return None
+    except requests.HTTPError as e:
+        print(f"Failed to query member by email {email}: {e.response.text}")
+        return None
+
+
 ###############################################################################
 # Media upload helpers
 ###############################################################################
@@ -179,14 +212,14 @@ _limiter = RateLimiter(180)  # Use a conservative default
 
 def import_image_from_url(cfg: Dict[str, str], image_url: str) -> Optional[str]:
     """
-    Imports an image from a remote URL into the Wix Media Manager.
+    Importa uma imagem de uma URL remota para o Gerenciador de Mídia do Wix.
 
-    This function uses the Import File endpoint, which is the recommended way
-    to add external media to Wix.
+    Esta função utiliza o endpoint Import File, que é a maneira recomendada
+    de adicionar mídia externa ao Wix.
 
-    :param cfg: Wix configuration dictionary.
-    :param image_url: The source URL of the image.
-    :return: The Wix media ID of the imported file, or ``None`` on error.
+    :param cfg: Dicionário de configuração do Wix.
+    :param image_url: A URL de origem da imagem.
+    :return: O ID de mídia do Wix do arquivo importado, ou ``None`` em caso de erro.
     """
     if not image_url:
         return None
@@ -215,14 +248,14 @@ def import_image_from_url(cfg: Dict[str, str], image_url: str) -> Optional[str]:
 
 def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -> List[str]:
     """
-    Ensure that the given tag or category labels exist in Wix and return
-    their IDs.  This function first lists existing terms from Wix and
-    then creates any missing terms.
+    Garante que as etiquetas ou categorias fornecidas existam no Wix e
+    retorna seus IDs. Esta função primeiro lista os termos existentes no Wix
+    e, em seguida, cria quaisquer termos ausentes.
 
-    :param cfg: Wix configuration dictionary.
-    :param kind: Either "tags" or "categories".
-    :param labels: An iterable of term names (strings).
-    :return: A list of term IDs corresponding to the supplied labels, without duplicates.
+    :param cfg: Dicionário de configuração do Wix.
+    :param kind: "tags" ou "categories".
+    :param labels: Um iterável de nomes de termos (strings).
+    :return: Uma lista de IDs de termos correspondentes às etiquetas fornecidas, sem duplicatas.
     """
     ids: List[str] = []
     labels = [label.strip() for label in labels if label and label.strip()]
@@ -272,24 +305,24 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
 
 def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str, Any], member_id: str, *, allow_html_iframe: bool = True) -> Dict[str, Any]:
     """
-    Create a draft blog post in Wix using the provided rich content.
+    Cria um rascunho de postagem no blog no Wix usando o conteúdo rico fornecido.
 
-    The ``post`` dictionary should include at least ``Title``, ``Slug``,
-    optional ``Excerpt``, ``FeaturedImageUrl``, ``CategoryIds`` and
-    ``TagIds``, plus SEO metadata (``MetaTitle``, ``MetaDescription``).
+    O dicionário ``post`` deve incluir pelo menos ``Title``, ``Slug``,
+    opcionalmente ``Excerpt``, ``FeaturedImageUrl``, ``CategoryIds`` e
+    ``TagIds``, além de metadados de SEO (``MetaTitle``, ``MetaDescription``).
 
-    :param cfg: Wix configuration dictionary.
-    :param post: Normalized post dictionary.
-    :param ricos: Rich content object returned by
+    :param cfg: Dicionário de configuração do Wix.
+    :param post: Dicionário normalizado da postagem.
+    :param ricos: Objeto de conteúdo rico retornado por
                   :func:`src.parsers.ricos_parser.convert_html_to_ricos`.
-    :param member_id: The ID of the member to be set as the author.
-    :param allow_html_iframe: Whether to allow ``type: "html"`` nodes in
-                              the payload.  If the Wix API rejects
-                              HTML nodes, call this function again
-                              with ``allow_html_iframe=False`` and a
-                              stripped version of the rich content.
-    :return: The response payload from Wix describing the newly created draft.
-    :raises requests.HTTPError: on failure.
+    :param member_id: O ID do membro a ser definido como autor.
+    :param allow_html_iframe: Indica se deve permitir nós ``type: "html"`` no
+                              payload. Se a API do Wix rejeitar nós HTML,
+                              chame esta função novamente com
+                              ``allow_html_iframe=False`` e uma versão
+                              sem esses nós do conteúdo rico.
+    :return: O payload de resposta do Wix descrevendo o rascunho criado.
+    :raises requests.HTTPError: em caso de falha.
     """
     api_url = f"{cfg['base_url']}/blog/v3/draft-posts"
     # Assemble the draft post payload
@@ -308,6 +341,31 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
             },
         }
     }
+    
+    # Validate rich content structure
+    if not isinstance(ricos, dict) or "nodes" not in ricos:
+        print(f"WARNING: Invalid Ricos structure for post '{post.get('Title', 'Unknown')}'. Using empty content.")
+        body["draftPost"]["richContent"] = {"nodes": []}
+    
+    # Limit the size of rich content to prevent API errors
+    import json
+    ricos_json = json.dumps(body["draftPost"]["richContent"])
+    if len(ricos_json) > 50000:  # Limit to 50KB
+        print(f"WARNING: Ricos content too large ({len(ricos_json)} bytes). Truncating...")
+        # Keep only the first nodes to reduce size
+        original_nodes = body["draftPost"]["richContent"]["nodes"]
+        truncated_nodes = []
+        current_size = 0
+        
+        for node in original_nodes:
+            node_json = json.dumps(node)
+            if current_size + len(node_json) > 45000:  # Leave some margin
+                break
+            truncated_nodes.append(node)
+            current_size += len(node_json)
+            
+        body["draftPost"]["richContent"]["nodes"] = truncated_nodes
+        print(f"Truncated from {len(original_nodes)} to {len(truncated_nodes)} nodes")
     # Cover image
     if post.get("FeaturedImageId"):
         body["draftPost"]["media"] = {
@@ -329,6 +387,10 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
         resp = with_retries(do_request)
         return resp.json()
     except requests.HTTPError as e:
+        print(f"Failed to create draft post. Error: {e}")
+        if e.response:
+            print(f"Response body: {e.response.text}")
+            print(f"Request body: {json.dumps(body, indent=2)}")
         # Re-raise the exception so it can be handled upstream
         raise
 

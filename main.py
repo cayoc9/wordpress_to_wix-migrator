@@ -32,10 +32,17 @@ def main():
         )
         return
 
-    # Extract posts from the first available CSV or XML file
-    csv_path = csv_files[0] if csv_files else None
-    xml_path = xml_files[0] if xml_files else None
-    posts = tool.extract_posts(csv_path=csv_path, xml_path=xml_path)
+    posts = []
+    if csv_files:
+        csv_path = csv_files[0]
+        tool.log_message(f"Extracting posts from CSV {csv_path}")
+        posts = tool.extract_posts(csv_path=csv_path)
+
+    # If no posts were found in the CSV, try the XML file
+    if not posts and xml_files:
+        xml_path = xml_files[0]
+        tool.log_message(f"No posts found in CSV, trying XML {xml_path}")
+        posts = tool.extract_posts(xml_path=xml_path)
 
     if not posts:
         tool.log_message("No posts found in the export files.", level="ERROR")
