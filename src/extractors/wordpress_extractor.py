@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from html import unescape
 
 from src.utils.categories import parse_categories_field
+from src.utils.tags import parse_tags_field
 
 def extract_posts_from_csv(file_path):
     """
@@ -32,7 +33,8 @@ def extract_posts_from_csv(file_path):
                     'FeaturedImageUrl': row.get('Image URL', '').split('|')[0],
                     # Normaliza categorias vindas do CSV (separadas por '|', corrigindo entidades HTML)
                     'Categories': parse_categories_field(row.get('Categorias', '')),
-                    'Tags': [tag.strip() for tag in row.get('Tags', '').split(',') if tag.strip()],
+                    # Normaliza tags (separadas por '|', corrigindo entidades HTML)
+                    'Tags': parse_tags_field(row.get('Tags', '')),
                     'Status': row.get('Status'),
                     'Author ID': row.get('Author ID'),
                     'Author Username': row.get('Author Username'),
