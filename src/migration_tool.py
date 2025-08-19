@@ -277,12 +277,9 @@ class WordPressMigrationTool:
                 
                 # HTML conversion
                 print(f"DEBUG: Converting HTML to Ricos for post '{slug}'")
-                image_importer = lambda url: import_image_from_url(self.config["wix"], url)
                 ricos = convert_html_to_ricos(
                     self.config["wix"],
-                    post.get("ContentHTML", ""), 
-                    embed_strategy="html_iframe",
-                    image_importer=image_importer if not dry_run else None
+                    post.get("ContentHTML", ""),
                 )
                 print(f"DEBUG: Ricos content for post '{slug}':")
                 print(ricos)
