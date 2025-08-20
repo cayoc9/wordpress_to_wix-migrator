@@ -8,6 +8,12 @@ __all__ = [
     "convert_html_to_ricos",
 ]
 
+def generate_ricos_id() -> str:
+    """
+    Generates a valid Ricos node ID.
+    """
+    return str(uuid.uuid4()).replace("-", "")[:12] # Ricos IDs are typically shorter
+
 def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
     """
     Extracts text content from a BeautifulSoup element and applies Ricos decorations
@@ -29,7 +35,7 @@ def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
             for text_node in _get_text_nodes_with_decorations(child):
                 text_node["textData"]["decorations"].append({"type": "BOLD"})
                 text_nodes.append(text_node)
-        elif child.name in ["em", "i"]:
+        elif child.name == "em":
             # Apply ITALIC decoration
             for text_node in _get_text_nodes_with_decorations(child):
                 text_node["textData"]["decorations"].append({"type": "ITALIC"})
@@ -222,37 +228,33 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
             "lineBreakData": {}
         })
     elif element.name in ["table", "tbody", "tr", "td", "caption"]:
-        # Tables are not directly supported in Ricos. Convert their text content to paragraphs.
-        text_content = element.get_text(separator=" ", strip=True) # Use separator to preserve some spacing
-        if text_content:
-            print(f"WARNING: HTML table element '{element.name}' not directly supported. Converting content to PARAGRAPH.")
-            ricos_nodes.append({
-                "type": "PARAGRAPH",
-                "nodes": [{
-                    "type": "TEXT",
-                    "textData": {
-                        "text": text_content,
-                        "decorations": []
-                    }
-                }],
-                "paragraphData": {}
-            })
+        # Tables are not directly supported in Ricos. Convert to HTML node.
+        print(f"INFO: HTML table element '{element.name}' not directly supported. Converting to HTML node.")
+        ricos_nodes.append({
+            "type": "HTML",
+            "id": generate_ricos_id(),
+            "htmlData": {
+                "html": str(element),
+                "source": "HTML",
+                "containerData": {
+                    "width": {"custom": "940px"}
+                }
+            }
+        })
     else:
-        # For any other unhandled block-level tags, log a warning and try to extract text.
-        text_content = element.get_text(separator=" ", strip=True)
-        if text_content:
-            print(f"WARNING: Unhandled HTML tag '{element.name}'. Converting content to PARAGRAPH.")
-            ricos_nodes.append({
-                "type": "PARAGRAPH",
-                "nodes": [{
-                    "type": "TEXT",
-                    "textData": {
-                        "text": text_content,
-                        "decorations": []
-                    }
-                }],
-                "paragraphData": {}
-            })
+        # For any other unhandled block-level tags, convert to HTML node.
+        print(f"INFO: Unhandled HTML tag '{element.name}'. Converting to HTML node.")
+        ricos_nodes.append({
+            "type": "HTML",
+            "id": generate_ricos_id(),
+            "htmlData": {
+                "html": str(element),
+                "source": "HTML",
+                "containerData": {
+                    "width": {"custom": "940px"}
+                }
+            }
+        })
     return ricos_nodes
 
 def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", image_importer: Optional[Callable[[str], Optional[str]]] = None) -> Dict[str, Any]:
@@ -291,22 +293,20 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
         elif child.name in ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "img", "br", "table"]:
             # These are block-level elements or elements that should result in a block-level Ricos node
             ricos_output_nodes.extend(_convert_html_element_to_ricos_nodes(child, image_importer))
-        else:
-            # For any other unhandled top-level tags, log a warning and try to extract text.
-            text_content = child.get_text(separator=" ", strip=True)
-            if text_content:
-                print(f"WARNING: Unhandled top-level HTML tag '{child.name}'. Converting content to PARAGRAPH.")
-                ricos_output_nodes.append({
-                    "type": "PARAGRAPH",
-                    "nodes": [{
-                        "type": "TEXT",
-                        "textData": {
-                            "text": text_content,
-                            "decorations": []
-                        }
-                    }],
-                    "paragraphData": {}
-                })
+        elif child.name:
+            # For any other unhandled top-level tags, convert to HTML node.
+            print(f"INFO: Unhandled top-level HTML tag '{child.name}'. Converting to HTML node.")
+            ricos_output_nodes.append({
+                "type": "HTML",
+                "id": generate_ricos_id(),
+                "htmlData": {
+                    "html": str(child),
+                    "source": "HTML",
+                    "containerData": {
+                        "width": {"custom": "940px"}
+                    }
+                }
+            })
 
     print(f"DEBUG: Generated Ricos content (first 500 chars): {str(ricos_output_nodes)[:500]}...")
     return {"nodes": ricos_output_nodes}
