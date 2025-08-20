@@ -1,4 +1,5 @@
 import csv
+import html
 import re
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
@@ -28,7 +29,7 @@ def extract_posts_from_csv(file_path):
                     'Post Type': row.get('Post Type'),
                     'Permalink': row.get('Permalink'),
                     'FeaturedImageUrl': row.get('Image URL', '').split('|')[0],
-                    'Categories': [cat.strip() for cat in re.split(r'[,|]', row.get('Categorias', '')) if cat.strip()],
+                    'Categories': [html.unescape(part.strip()) for cat in re.split(r'[,|]', row.get('Categorias', '')) for part in re.split(r' & ', cat) if part.strip()],
                     'Tags': [tag.strip() for tag in re.split(r'[,|]', row.get('Tags', '')) if tag.strip()],
                     'Status': row.get('Status'),
                     'Author ID': row.get('Author ID'),
@@ -83,9 +84,19 @@ def extract_posts_from_xml(file_path):
                 if path:
                     slug = path.strip('/').split('/')[-1]
 
-            categories = [
-                cat.text for cat in item.findall('category[@domain="category"]')
-            ]
+            categories = []
+            for cat_element in item.findall('category[@domain="category"]'):
+                if cat_element.text:
+                    # First split by comma or pipe
+                    parts_by_comma_pipe = re.split(r'[,|]', cat_element.text)
+                    for part_cp in parts_by_comma_pipe:
+                        # Then unescape and split by " & "
+                        unescaped_part = html.unescape(part_cp.strip())
+                        parts_by_amp = re.split(r' & ', unescaped_part)
+                        for final_part in parts_by_amp:
+                            stripped_final_part = final_part.strip()
+                            if stripped_final_part:
+                                categories.append(stripped_final_part)
             tags = [
                 tag.text for tag in item.findall('category[@domain="post_tag"]')
             ]
