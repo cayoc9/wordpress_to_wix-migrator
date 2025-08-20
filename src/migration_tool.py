@@ -245,11 +245,13 @@ class WordPressMigrationTool:
                     else:
                         post["CategoryIds"] = get_or_create_terms(self.config["wix"], "categories", post["Categories"])
                 if post.get("Tags"):
+                    self.log_message(f"DEBUG: Processing tags: {post['Tags']}")
                     if dry_run:
                         self.log_message(f"Dry-run: would ensure tags {post['Tags']}")
                     else:
                         # Limit tags to 30 as per Wix API validation
                         post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", post["Tags"][:30])
+                        self.log_message(f"DEBUG: Tag IDs returned: {post['TagIds']}")
 
 
                 
