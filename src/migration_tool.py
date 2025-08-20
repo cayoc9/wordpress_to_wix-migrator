@@ -257,7 +257,8 @@ class WordPressMigrationTool:
                 ricos = convert_html_to_ricos(
                     post.get("ContentHTML", ""), 
                     embed_strategy="html_iframe",
-                    image_importer=image_importer if not dry_run else None
+                    image_importer=image_importer if not dry_run else None,
+                    paragraph_spacing_px=2
                 )
                 print(f"DEBUG: Ricos content for post '{slug}':")
                 print(ricos)
