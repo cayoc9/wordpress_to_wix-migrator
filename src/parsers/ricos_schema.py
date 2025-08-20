@@ -55,6 +55,46 @@ def deco(deco_type: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any
     return d
 
 
+def image_node_wix_media(media_id: str, caption: Optional[str] = None) -> Dict[str, Any]:
+    node: Dict[str, Any] = {
+        "type": "IMAGE",
+        "data": {
+            "src": {"id": media_id}
+        }
+    }
+    if caption:
+        node["data"]["caption"] = caption
+    return node
+
+
+def html_block(raw_html: str) -> Dict[str, Any]:
+    return {
+        "type": "HTML",
+        "data": {"html": raw_html or ""}
+    }
+
+
+def table_node_simple(rows: List[List[str]], header_rows: int = 0) -> Dict[str, Any]:
+    """
+    Conservative TABLE node. Each cell becomes a paragraph text-only cell.
+    This shape may need to be adapted to the exact Ricos TABLE schema supported
+    by Blog; use with caution behind a feature flag.
+    """
+    data_rows: List[Dict[str, Any]] = []
+    for r in rows:
+        cells = []
+        for text in r:
+            cells.append({"nodes": [paragraph([text_node(text)])]})
+        data_rows.append({"cells": cells})
+    return {
+        "type": "TABLE",
+        "data": {
+            "rows": data_rows,
+            "headerRows": max(0, int(header_rows or 0)),
+        },
+    }
+
+
 # --- Minimal validator/normalizer ---
 
 def validate_ricos(document: Dict[str, Any]) -> Dict[str, Any]:
@@ -84,4 +124,3 @@ def validate_ricos(document: Dict[str, Any]) -> Dict[str, Any]:
         else:
             fixed.append(n)
     return doc(fixed)
-

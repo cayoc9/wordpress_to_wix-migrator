@@ -16,13 +16,21 @@ from .ricos_schema import (
     text_node,
     deco,
     validate_ricos,
+    image_node_wix_media,
+    html_block,
+    table_node_simple,
 )
 
 
 InlineDeco = Dict[str, Any]
 
 
-def convert_html_to_ricos_local(html: str) -> Dict[str, Any]:
+def convert_html_to_ricos_local(
+    html: str,
+    *,
+    image_importer: Optional[callable] = None,
+    table_mode: str = "html",
+) -> Dict[str, Any]:
     """
     Convert HTML to a basic Ricos document without using Wix APIs.
 
@@ -43,7 +51,7 @@ def convert_html_to_ricos_local(html: str) -> Dict[str, Any]:
 
     nodes: List[Dict[str, Any]] = []
 
-    def build_inline(node: Tag, active: List[InlineDeco]) -> List[Dict[str, Any]]:
+    def build_inline_from_nodes(children_iter, active: List[InlineDeco], deferred_blocks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         parts: List[Dict[str, Any]] = []
 
         def flush_text(s: str):
@@ -51,7 +59,7 @@ def convert_html_to_ricos_local(html: str) -> Dict[str, Any]:
             if s.strip():
                 parts.append(text_node(s, active.copy() if active else None))
 
-        for child in node.children:
+        for child in children_iter:
             if isinstance(child, NavigableString):
                 flush_text(str(child))
                 continue
@@ -85,24 +93,40 @@ def convert_html_to_ricos_local(html: str) -> Dict[str, Any]:
             if name == "img":
                 alt = child.get("alt") or "imagem"
                 src = child.get("src") or ""
+                if image_importer and src:
+                    try:
+                        media_id = image_importer(src)
+                    except Exception:
+                        media_id = None
+                    if media_id:
+                        deferred_blocks.append(image_node_wix_media(media_id, caption=alt or None))
+                        continue
+                # Fallback: textual placeholder
                 flush_text(f"[Imagem: {alt}] {src}".strip())
                 continue
 
             # Recurse for inline children
-            parts.extend(build_inline(child, new_active))
+            # Recurse for inline children
+            parts.extend(build_inline_from_nodes(child.children, new_active, deferred_blocks))
         return parts
+
+    def build_inline(node: Tag, active: List[InlineDeco], deferred_blocks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        return build_inline_from_nodes(node.children, active, deferred_blocks)
 
     def handle_block(el: Tag):
         name = (el.name or "").lower()
         if name in {"p", "span", "div", "section"}:
             # Treat as paragraph-ish: collapse into a paragraph
-            inlines = build_inline(el, [])
+            deferred_blocks: List[Dict[str, Any]] = []
+            inlines = build_inline(el, [], deferred_blocks)
             if inlines:
                 nodes.append(paragraph(inlines))
+            if deferred_blocks:
+                nodes.extend(deferred_blocks)
             return
         if name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
             lvl = int(name[1])
-            inlines = build_inline(el, [])
+            inlines = build_inline(el, [], [])
             nodes.append(heading(lvl, inlines))
             return
         if name in {"ul", "ol"}:
@@ -110,14 +134,14 @@ def convert_html_to_ricos_local(html: str) -> Dict[str, Any]:
             items: List[Dict[str, Any]] = []
             for li in el.find_all("li", recursive=False):
                 # Each li becomes LIST_ITEM with a paragraph from its text
-                inlines = build_inline(li, [])
+                inlines = build_inline(li, [], [])
                 if inlines:
                     items.append(list_item([paragraph(inlines)]))
             if items:
                 nodes.append(list_container(ordered, items))
             return
         if name == "blockquote":
-            inlines = build_inline(el, [])
+            inlines = build_inline(el, [], [])
             if inlines:
                 nodes.append(blockquote([paragraph(inlines)]))
             return
@@ -131,7 +155,45 @@ def convert_html_to_ricos_local(html: str) -> Dict[str, Any]:
             nodes.append(code_block(normalize_ws(text)))
             return
         if name in {"table", "thead", "tbody", "tr", "td", "th", "figure", "figcaption"}:
-            # Simplify to plain paragraph text for v1
+            # Tables/figures handling
+            # Try to extract image inside figure
+            img = el.find("img")
+            if img and image_importer:
+                src = img.get("src") or ""
+                alt = img.get("alt") or None
+                if src:
+                    try:
+                        media_id = image_importer(src)
+                    except Exception:
+                        media_id = None
+                    if media_id:
+                        nodes.append(image_node_wix_media(media_id, caption=alt))
+                        return
+            # Table modes: html (default), plugin, paragraphs
+            if name == "table":
+                if table_mode == "html":
+                    nodes.append(html_block(str(el)))
+                    return
+                elif table_mode == "plugin":
+                    # Build rows from text of cells
+                    rows: List[List[str]] = []
+                    for tr in el.find_all("tr", recursive=False):
+                        cells: List[str] = []
+                        for cell in tr.find_all(["td", "th"], recursive=False):
+                            cells.append(cell.get_text(" ", strip=True))
+                        if cells:
+                            rows.append(cells)
+                    if rows:
+                        # crude header rows detection: if any th in first row
+                        header_rows = 1 if el.find("tr") and el.find("tr").find("th") else 0
+                        nodes.append(table_node_simple(rows, header_rows=header_rows))
+                        return
+                # paragraphs fallback
+                txt = el.get_text(" ", strip=True)
+                if txt:
+                    nodes.append(paragraph([text_node(txt)]))
+                return
+            # Not a root table; fallback text
             txt = el.get_text(" ", strip=True)
             if txt:
                 nodes.append(paragraph([text_node(txt)]))
@@ -147,15 +209,45 @@ def convert_html_to_ricos_local(html: str) -> Dict[str, Any]:
         if txt:
             nodes.append(paragraph([text_node(txt)]))
 
-    # Traverse top-level blocks
+    # Traverse top-level: coalesce inline siblings into a single paragraph
+    def is_inline_tag(t: Optional[str]) -> bool:
+        if not t:
+            return False
+        t = t.lower()
+        return t in {"span", "a", "strong", "b", "em", "i", "u", "s", "strike", "del", "code", "img", "br"}
+
     container = soup.body if soup.body else soup
+    inline_run: List[Any] = []
+
+    def flush_inline_run():
+        nonlocal inline_run
+        if not inline_run:
+            return
+        deferred_blocks: List[Dict[str, Any]] = []
+        inlines = build_inline_from_nodes(inline_run, [], deferred_blocks)
+        if inlines:
+            nodes.append(paragraph(inlines))
+        if deferred_blocks:
+            nodes.extend(deferred_blocks)
+        inline_run = []
+
     for child in container.children:
         if isinstance(child, NavigableString):
-            t = str(child).strip()
-            if t:
-                nodes.append(paragraph([text_node(normalize_ws(t))]))
-        elif isinstance(child, Tag):
+            if str(child).strip():
+                inline_run.append(child)
+            else:
+                # whitespace boundary ends run
+                flush_inline_run()
+            continue
+        if isinstance(child, Tag) and is_inline_tag(child.name):
+            inline_run.append(child)
+            continue
+        # Block-level element encountered
+        flush_inline_run()
+        if isinstance(child, Tag):
             handle_block(child)
 
-    return validate_ricos(doc(nodes))
+    # flush any trailing inline run
+    flush_inline_run()
 
+    return validate_ricos(doc(nodes))
