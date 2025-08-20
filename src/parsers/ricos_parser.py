@@ -37,22 +37,52 @@ def _get_text_alignment(element: Any) -> Optional[str]:
 
     return None
 
+def _get_inline_styles(element: Any) -> Dict[str, str]:
+    """
+    Extracts inline CSS styles from an HTML element.
+    """
+    style_attr = element.get("style")
+    styles = {}
+    if style_attr:
+        for style_pair in style_attr.split(";"):
+            if ":" in style_pair:
+                prop, value = style_pair.split(":", 1)
+                styles[prop.strip()] = value.strip()
+    return styles
 
+def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
     """
     Extracts text content from a BeautifulSoup element and applies Ricos decorations
     based on inline HTML tags (strong, em, a, span).
     """
     text_nodes = []
+    inline_styles = _get_inline_styles(element)
+
     for child in element.contents:
         if isinstance(child, NavigableString):
             if str(child).strip():
-                text_nodes.append({
+                text_node = {
                     "type": "TEXT",
                     "textData": {
                         "text": str(child),
                         "decorations": []
                     }
-                })
+                }
+                # Apply inline style decorations
+                if "text-decoration" in inline_styles and "underline" in inline_styles["text-decoration"]:
+                    text_node["textData"]["decorations"].append({"type": "UNDERLINE"})
+                if "color" in inline_styles:
+                    text_node["textData"]["decorations"].append({"type": "COLOR", "colorData": {"foreground": inline_styles["color"]}})
+                if "background-color" in inline_styles:
+                    text_node["textData"]["decorations"].append({"type": "COLOR", "colorData": {"background": inline_styles["background-color"]}})
+                if "font-size" in inline_styles:
+                    # Ricos expects font size in px, so ensure it's in px
+                    font_size_val = inline_styles["font-size"].replace("px", "")
+                    try:
+                        text_node["textData"]["decorations"].append({"type": "FONT_SIZE", "fontSizeData": {"value": float(font_size_val), "unit": "PX"}})
+                    except ValueError:
+                        pass # Ignore if not a valid float
+                text_nodes.append(text_node)
         elif child.name in ["strong", "b"]:
             # Apply BOLD decoration to all text nodes within this strong/b tag
             for text_node in _get_text_nodes_with_decorations(child):
@@ -62,6 +92,11 @@ def _get_text_alignment(element: Any) -> Optional[str]:
             # Apply ITALIC decoration
             for text_node in _get_text_nodes_with_decorations(child):
                 text_node["textData"]["decorations"].append({"type": "ITALIC"})
+                text_nodes.append(text_node)
+        elif child.name == "u":
+            # Apply UNDERLINE decoration
+            for text_node in _get_text_nodes_with_decorations(child):
+                text_node["textData"]["decorations"].append({"type": "UNDERLINE"})
                 text_nodes.append(text_node)
         elif child.name == "a":
             # Apply LINK decoration
@@ -112,7 +147,18 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
         # NavigableString should be handled by the caller (convert_html_to_ricos or _get_text_nodes_with_decorations)
         return ricos_nodes
 
-    if element.name in ["p", "span", "b", "a"]:
+    inline_styles = _get_inline_styles(element)
+    text_style_data = {}
+    if "line-height" in inline_styles:
+        text_style_data["lineHeight"] = inline_styles["line-height"]
+    
+    node_style_data = {}
+    if paragraph_spacing_px is not None:
+        node_style_data["paddingBottom"] = f"{paragraph_spacing_px}px"
+    if "padding-top" in inline_styles:
+        node_style_data["paddingTop"] = inline_styles["padding-top"]
+    
+    if element.name == "p":
         paragraph_content_nodes = _get_text_nodes_with_decorations(element)
         if paragraph_content_nodes:
             paragraph_node = {
@@ -122,8 +168,10 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
             }
             alignment = _get_text_alignment(element)
             paragraph_node["paragraphData"]["textStyle"] = {"textAlignment": alignment if alignment else "JUSTIFY"}
-            if paragraph_spacing_px is not None:
-                paragraph_node["style"] = {"paddingBottom": f"{paragraph_spacing_px}px"}
+            if text_style_data:
+                paragraph_node["paragraphData"]["textStyle"].update(text_style_data)
+            if node_style_data:
+                paragraph_node["style"] = node_style_data
             ricos_nodes.append(paragraph_node)
     elif element.name and re.match(r"h[1-6]", element.name):
         heading_level_map = {
@@ -140,8 +188,10 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
             }
             alignment = _get_text_alignment(element)
             heading_node["headingData"]["textStyle"] = {"textAlignment": alignment if alignment else "JUSTIFY"}
-            if paragraph_spacing_px is not None:
-                heading_node["style"] = {"paddingBottom": f"{paragraph_spacing_px}px"}
+            if text_style_data:
+                heading_node["headingData"]["textStyle"].update(text_style_data)
+            if node_style_data:
+                heading_node["style"] = node_style_data
             ricos_nodes.append(heading_node)
     elif element.name == "img":
         src = element.get("src")
@@ -197,8 +247,10 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
                 }
                 alignment = _get_text_alignment(li)
                 paragraph_node["paragraphData"]["textStyle"] = {"textAlignment": alignment if alignment else "JUSTIFY"}
-                if paragraph_spacing_px is not None:
-                    paragraph_node["style"] = {"paddingBottom": f"{paragraph_spacing_px}px"}
+                if text_style_data:
+                    paragraph_node["paragraphData"]["textStyle"].update(text_style_data)
+                if node_style_data:
+                    paragraph_node["style"] = node_style_data
                 li_nodes.append(paragraph_node)
             
             # Handle nested lists within <li>
@@ -265,20 +317,6 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
             "nodes": [],
             "lineBreakData": {}
         })
-    elif element.name in ["em", "i"]:
-        # Treat <em> and <i> as inline elements, wrapping their content in a paragraph.
-        paragraph_content_nodes = _get_text_nodes_with_decorations(element)
-        if paragraph_content_nodes:
-            paragraph_node = {
-                "type": "PARAGRAPH",
-                "nodes": paragraph_content_nodes,
-                "paragraphData": {}
-            }
-            alignment = _get_text_alignment(element)
-            paragraph_node["paragraphData"]["textStyle"] = {"textAlignment": alignment if alignment else "JUSTIFY"}
-            if paragraph_spacing_px is not None:
-                paragraph_node["style"] = {"paddingBottom": f"{paragraph_spacing_px}px"}
-            ricos_nodes.append(paragraph_node)
     elif element.name in ["table", "tbody", "tr", "td", "caption"]:
         # Tables are not directly supported in Ricos. Convert to HTML node.
         print(f"INFO: HTML table element '{element.name}'. Converting to HTML node.")
@@ -309,75 +347,12 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
         })
     return ricos_nodes
 
-def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
-    """
-    Extracts text content from a BeautifulSoup element and applies Ricos decorations
-    based on inline HTML tags (strong, em, a, span).
-    """
-    text_nodes = []
-    for child in element.contents:
-        if isinstance(child, NavigableString):
-            if str(child).strip():
-                text_nodes.append({
-                    "type": "TEXT",
-                    "textData": {
-                        "text": str(child),
-                        "decorations": []
-                    }
-                })
-        elif child.name in ["strong", "b"]:
-            # Apply BOLD decoration to all text nodes within this strong/b tag
-            for text_node in _get_text_nodes_with_decorations(child):
-                text_node["textData"]["decorations"].append({"type": "BOLD"})
-                text_nodes.append(text_node)
-        elif child.name in ["em", "i"]:
-            # Apply ITALIC decoration
-            for text_node in _get_text_nodes_with_decorations(child):
-                text_node["textData"]["decorations"].append({"type": "ITALIC"})
-                text_nodes.append(text_node)
-        elif child.name == "a":
-            # Apply LINK decoration
-            href = child.get("href")
-            if href:
-                for text_node in _get_text_nodes_with_decorations(child):
-                    text_node["textData"]["decorations"].append({
-                        "type": "LINK",
-                        "linkData": {"url": href}
-                    })
-                    text_nodes.append(text_node)
-            else: # If <a> tag has no href, just process its children
-                text_nodes.extend(_get_text_nodes_with_decorations(child))
-        elif child.name == "span":
-            # For span, just process its children, ignoring its own styling
-            text_nodes.extend(_get_text_nodes_with_decorations(child))
-        elif child.name == "br":
-            # Line breaks within text content are represented as a space for now.
-            # A more advanced solution might split text nodes and insert LINE_BREAK nodes.
-            text_nodes.append({
-                "type": "TEXT",
-                "textData": {
-                    "text": " ",
-                    "decorations": []
-                }
-            })
-        else:
-            # For any other unexpected tag within what should be inline content,
-            # try to extract its text content and add it as a plain text node.
-            if child.get_text(strip=True):
-                text_nodes.append({
-                    "type": "TEXT",
-                    "textData": {
-                        "text": child.get_text(),
-                        "decorations": []
-                    }
-                })
-    return text_nodes
-
 def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", image_importer: Optional[Callable[[str], Optional[str]]] = None, paragraph_spacing_px: Optional[int] = None) -> Dict[str, Any]:
     """
     Converts HTML to Wix Ricos format by parsing HTML elements into native Ricos nodes.
     This version aims to convert HTML tags like p, h1-h6, img, ul, ol, li, blockquote,
     and apply inline text decorations for strong, em, and a.
+    It also groups consecutive inline elements into single paragraphs.
     """
     print(f"DEBUG: convert_html_to_ricos called with HTML (length {len(html) if html else 0}): {html[:200] if html else ''}...")
 
@@ -387,42 +362,51 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
 
     soup = BeautifulSoup(html, "html.parser")
     ricos_output_nodes = []
+    
+    # Define block-level tags that should break inline grouping
+    BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "img", "br", "table", "div", "hr", "pre"]
+
+    inline_buffer = []
+
+    def flush_inline_buffer():
+        nonlocal inline_buffer
+        if not inline_buffer:
+            return
+
+        # Create a temporary paragraph to hold the inline elements
+        temp_p = soup.new_tag("p")
+        for item in inline_buffer:
+            temp_p.append(item.extract()) # Use extract to move the item
+
+        paragraph_content_nodes = _get_text_nodes_with_decorations(temp_p)
+        if paragraph_content_nodes:
+            paragraph_node = {
+                "type": "PARAGRAPH",
+                "nodes": paragraph_content_nodes,
+                "paragraphData": {"textStyle": {"textAlignment": "JUSTIFY"}}
+            }
+            if paragraph_spacing_px is not None:
+                paragraph_node["style"] = {"paddingBottom": f"{paragraph_spacing_px}px"}
+            ricos_output_nodes.append(paragraph_node)
+        
+        inline_buffer = []
 
     # Process direct children of the body or the soup itself if no body tag
-    # This loop should only call _convert_html_element_to_ricos_nodes for block-level elements
-    # or wrap NavigableStrings in paragraphs.
-    for child in soup.body.children if soup.body else soup.children:
-        if isinstance(child, NavigableString):
-            text = str(child).strip()
-            if text:
-                ricos_output_nodes.append({
-                    "type": "PARAGRAPH",
-                    "nodes": [{
-                        "type": "TEXT",
-                        "textData": {
-                            "text": text,
-                            "decorations": []
-                        }
-                    }],
-                    "paragraphData": {}
-                })
-        elif child.name in ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote", "img", "br", "table", "em", "i", "span", "b", "a"]:
-            # These are block-level elements or elements that should result in a block-level Ricos node
-            ricos_output_nodes.extend(_convert_html_element_to_ricos_nodes(child, image_importer, paragraph_spacing_px))
-        elif child.name:
-            # For any other unhandled top-level tags, convert to HTML node.
-            print(f"INFO: Unhandled top-level HTML tag '{child.name}'. Converting to HTML node.")
-            ricos_output_nodes.append({
-                "type": "HTML",
-                "id": generate_ricos_id(),
-                "htmlData": {
-                    "html": str(child),
-                    "source": "HTML",
-                    "containerData": {
-                        "width": {"custom": "940px"}
-                    }
-                }
-            })
+    children = list(soup.body.children) if soup.body else list(soup.children)
+    
+    for child in children:
+        is_inline = isinstance(child, NavigableString) or (hasattr(child, 'name') and child.name not in BLOCK_TAGS)
+
+        if is_inline:
+            inline_buffer.append(child)
+        else:
+            flush_inline_buffer()
+            # Process the block-level element
+            if hasattr(child, 'name') and child.name:
+                 ricos_output_nodes.extend(_convert_html_element_to_ricos_nodes(child, image_importer, paragraph_spacing_px))
+
+    # Flush any remaining inline elements at the end
+    flush_inline_buffer()
 
     print(f"DEBUG: Generated Ricos content (first 500 chars): {str(ricos_output_nodes)[:500]}...")
     return {"nodes": ricos_output_nodes}
