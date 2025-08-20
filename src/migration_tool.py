@@ -250,6 +250,8 @@ class WordPressMigrationTool:
                     else:
                         # Limit tags to 30 as per Wix API validation
                         post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", post["Tags"][:30])
+
+
                 
                 # HTML conversion
                 print(f"DEBUG: Converting HTML to Ricos for post '{slug}'")

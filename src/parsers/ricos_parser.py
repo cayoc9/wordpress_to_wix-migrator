@@ -392,6 +392,37 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
             if node_style_data:
                 figcaption_node["style"] = node_style_data
             ricos_nodes.append(figcaption_node)
+    elif element.name == "figure":
+        # Handle <figure> tag: process its children (img and figcaption)
+        figure_nodes = []
+        for child in element.children:
+            if child.name == "img":
+                figure_nodes.extend(_convert_html_element_to_ricos_nodes(child, image_importer, paragraph_spacing_px))
+            elif child.name == "figcaption":
+                # figcaption should be a paragraph
+                figcaption_content_nodes = _get_text_nodes_with_decorations(child)
+                if figcaption_content_nodes:
+                    figcaption_node = {
+                        "type": "PARAGRAPH",
+                        "nodes": figcaption_content_nodes,
+                        "paragraphData": {"textStyle": {"textAlignment": "CENTER"}} # Captions are often centered
+                    }
+                    if node_style_data:
+                        figcaption_node["style"] = node_style_data
+                    figure_nodes.append(figcaption_node)
+        ricos_nodes.extend(figure_nodes)
+    elif element.name == "figcaption":
+        # figcaption should be a paragraph (handled when inside figure, but also if standalone)
+        figcaption_content_nodes = _get_text_nodes_with_decorations(element)
+        if figcaption_content_nodes:
+            figcaption_node = {
+                "type": "PARAGRAPH",
+                "nodes": figcaption_content_nodes,
+                "paragraphData": {"textStyle": {"textAlignment": "CENTER"}} # Captions are often centered
+            }
+            if node_style_data:
+                figcaption_node["style"] = node_style_data
+            ricos_nodes.append(figcaption_node)
     elif element.name in ["table", "tbody", "tr", "td", "caption"]:
         # Tables are not directly supported in Ricos. Convert to HTML node.
         print(f"INFO: HTML table element '{element.name}'. Converting to HTML node.")
