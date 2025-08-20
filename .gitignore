@@ -139,11 +139,11 @@ cython_debug/
 /reports/*
 
 # Ignore downloaded data if any
-/data/*
+#/data/*
 
 /.github
 /.vscode
 /plan_refact.md
 /relatorio_analise.md
-/docs/*
+#/docs/*
 
