@@ -114,15 +114,9 @@ def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
             # For span, just process its children, ignoring its own styling
             text_nodes.extend(_get_text_nodes_with_decorations(child))
         elif child.name == "br":
-            # Line breaks within text content are represented as a space for now.
-            # A more advanced solution might split text nodes and insert LINE_BREAK nodes.
-            text_nodes.append({
-                "type": "TEXT",
-                "textData": {
-                    "text": " ",
-                    "decorations": []
-                }
-            })
+            # This case should be handled by the calling function, which splits nodes.
+            # We pass it up by not converting it to a space.
+            pass
         else:
             # For any other unexpected tag within what should be inline content,
             # try to extract its text content and add it as a plain text node.
@@ -142,9 +136,10 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
     into a list of Ricos nodes.
     """
     ricos_nodes = []
+    soup = BeautifulSoup("", "html.parser") # Used to create temporary tags
 
     if isinstance(element, NavigableString):
-        # NavigableString should be handled by the caller (convert_html_to_ricos or _get_text_nodes_with_decorations)
+        # NavigableString should be handled by the caller (convert_html_to_ricos)
         return ricos_nodes
 
     inline_styles = _get_inline_styles(element)
@@ -159,20 +154,43 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
         node_style_data["paddingTop"] = inline_styles["padding-top"]
     
     if element.name == "p":
-        paragraph_content_nodes = _get_text_nodes_with_decorations(element)
-        if paragraph_content_nodes:
-            paragraph_node = {
-                "type": "PARAGRAPH",
-                "nodes": paragraph_content_nodes,
-                "paragraphData": {}
-            }
-            alignment = _get_text_alignment(element)
-            paragraph_node["paragraphData"]["textStyle"] = {"textAlignment": alignment if alignment else "JUSTIFY"}
-            if text_style_data:
-                paragraph_node["paragraphData"]["textStyle"].update(text_style_data)
-            if node_style_data:
-                paragraph_node["style"] = node_style_data
-            ricos_nodes.append(paragraph_node)
+        inline_buffer = []
+
+        def flush_paragraph_buffer():
+            nonlocal inline_buffer
+            if not inline_buffer:
+                return
+
+            temp_p = soup.new_tag("p")
+            for item in inline_buffer:
+                temp_p.append(item.extract())
+
+            paragraph_content_nodes = _get_text_nodes_with_decorations(temp_p)
+            if paragraph_content_nodes:
+                paragraph_node = {
+                    "type": "PARAGRAPH",
+                    "nodes": paragraph_content_nodes,
+                    "paragraphData": {}
+                }
+                alignment = _get_text_alignment(element)
+                paragraph_node["paragraphData"]["textStyle"] = {"textAlignment": alignment if alignment else "JUSTIFY"}
+                if text_style_data:
+                    paragraph_node["paragraphData"]["textStyle"].update(text_style_data)
+                if node_style_data:
+                    paragraph_node["style"] = node_style_data
+                ricos_nodes.append(paragraph_node)
+            
+            inline_buffer = []
+
+        for child in list(element.children):
+            if hasattr(child, 'name') and child.name == 'br':
+                flush_paragraph_buffer()
+                ricos_nodes.append({"type": "LINE_BREAK", "nodes": [], "lineBreakData": {}})
+            else:
+                inline_buffer.append(child)
+        
+        flush_paragraph_buffer()
+
     elif element.name and re.match(r"h[1-6]", element.name):
         heading_level_map = {
             "h1": "HEADING_ONE", "h2": "HEADING_TWO", "h3": "HEADING_THREE",
@@ -193,6 +211,32 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
             if node_style_data:
                 heading_node["style"] = node_style_data
             ricos_nodes.append(heading_node)
+    elif element.name in ["b", "strong"]:
+        content_nodes = _get_text_nodes_with_decorations(element)
+        for node in content_nodes:
+            is_bold = any(d.get("type") == "BOLD" for d in node.get("textData", {}).get("decorations", []))
+            if not is_bold:
+                node.get("textData", {}).setdefault("decorations", []).append({"type": "BOLD"})
+        if content_nodes:
+            paragraph_node = {
+                "type": "PARAGRAPH",
+                "nodes": content_nodes,
+                "paragraphData": {"textStyle": {"textAlignment": "JUSTIFY"}}
+            }
+            ricos_nodes.append(paragraph_node)
+    elif element.name in ["em", "i"]:
+        content_nodes = _get_text_nodes_with_decorations(element)
+        for node in content_nodes:
+            is_italic = any(d.get("type") == "ITALIC" for d in node.get("textData", {}).get("decorations", []))
+            if not is_italic:
+                node.get("textData", {}).setdefault("decorations", []).append({"type": "ITALIC"})
+        if content_nodes:
+            paragraph_node = {
+                "type": "PARAGRAPH",
+                "nodes": content_nodes,
+                "paragraphData": {"textStyle": {"textAlignment": "JUSTIFY"}}
+            }
+            ricos_nodes.append(paragraph_node)
     elif element.name == "img":
         src = element.get("src")
         alt = element.get("alt", "")
@@ -317,6 +361,37 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
             "nodes": [],
             "lineBreakData": {}
         })
+    elif element.name == "figure":
+        # Handle <figure> tag: process its children (img and figcaption)
+        figure_nodes = []
+        for child in element.children:
+            if child.name == "img":
+                figure_nodes.extend(_convert_html_element_to_ricos_nodes(child, image_importer, paragraph_spacing_px))
+            elif child.name == "figcaption":
+                # figcaption should be a paragraph
+                figcaption_content_nodes = _get_text_nodes_with_decorations(child)
+                if figcaption_content_nodes:
+                    figcaption_node = {
+                        "type": "PARAGRAPH",
+                        "nodes": figcaption_content_nodes,
+                        "paragraphData": {"textStyle": {"textAlignment": "CENTER"}} # Captions are often centered
+                    }
+                    if node_style_data:
+                        figcaption_node["style"] = node_style_data
+                    figure_nodes.append(figcaption_node)
+        ricos_nodes.extend(figure_nodes)
+    elif element.name == "figcaption":
+        # figcaption should be a paragraph (handled when inside figure, but also if standalone)
+        figcaption_content_nodes = _get_text_nodes_with_decorations(element)
+        if figcaption_content_nodes:
+            figcaption_node = {
+                "type": "PARAGRAPH",
+                "nodes": figcaption_content_nodes,
+                "paragraphData": {"textStyle": {"textAlignment": "CENTER"}} # Captions are often centered
+            }
+            if node_style_data:
+                figcaption_node["style"] = node_style_data
+            ricos_nodes.append(figcaption_node)
     elif element.name in ["table", "tbody", "tr", "td", "caption"]:
         # Tables are not directly supported in Ricos. Convert to HTML node.
         print(f"INFO: HTML table element '{element.name}'. Converting to HTML node.")
@@ -352,7 +427,7 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
     Converts HTML to Wix Ricos format by parsing HTML elements into native Ricos nodes.
     This version aims to convert HTML tags like p, h1-h6, img, ul, ol, li, blockquote,
     and apply inline text decorations for strong, em, and a.
-    It also groups consecutive inline elements into single paragraphs.
+    It also groups consecutive inline elements into single paragraphs and handles <br> tags.
     """
     print(f"DEBUG: convert_html_to_ricos called with HTML (length {len(html) if html else 0}): {html[:200] if html else ''}...")
 
@@ -360,11 +435,23 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
         print("DEBUG: HTML is empty, returning empty nodes")
         return {"nodes": []}
 
+    # Pre-process [caption] shortcodes into <figure> and <figcaption>
+    def caption_shortcode_to_figure(match):
+        img_tag = match.group(2)
+        caption_text = match.group(3).strip()
+        if caption_text:
+            return f'<figure class="wp-caption">{img_tag}<figcaption class="wp-caption-text">{caption_text}</figcaption></figure>'
+        else:
+            return img_tag
+
+    caption_pattern = re.compile(r'\[caption(.*?)\]\s*(<img .*?>)\s*(.*?)\s*\[/caption\]', re.DOTALL)
+    html = caption_pattern.sub(caption_shortcode_to_figure, html)
+
     soup = BeautifulSoup(html, "html.parser")
     ricos_output_nodes = []
     
     # Define block-level tags that should break inline grouping
-    BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "img", "br", "table", "div", "hr", "pre"]
+    BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "img", "br", "table", "div", "hr", "pre", "b", "strong", "i", "em", "figure", "figcaption"]
 
     inline_buffer = []
 
