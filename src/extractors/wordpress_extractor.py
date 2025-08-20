@@ -1,4 +1,5 @@
 import csv
+import re
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
 
@@ -27,8 +28,8 @@ def extract_posts_from_csv(file_path):
                     'Post Type': row.get('Post Type'),
                     'Permalink': row.get('Permalink'),
                     'FeaturedImageUrl': row.get('Image URL', '').split('|')[0],
-                    'Categories': [cat.strip() for cat in row.get('Categorias', '').split(',') if cat.strip()],
-                    'Tags': [tag.strip() for tag in row.get('Tags', '').split(',') if tag.strip()],
+                    'Categories': [cat.strip() for cat in re.split(r'[,|]', row.get('Categorias', '')) if cat.strip()],
+                    'Tags': [tag.strip() for tag in re.split(r'[,|]', row.get('Tags', '')) if tag.strip()],
                     'Status': row.get('Status'),
                     'Author ID': row.get('Author ID'),
                     'Author Username': row.get('Author Username'),
