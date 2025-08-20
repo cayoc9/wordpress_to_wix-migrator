@@ -35,7 +35,7 @@ def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
             for text_node in _get_text_nodes_with_decorations(child):
                 text_node["textData"]["decorations"].append({"type": "BOLD"})
                 text_nodes.append(text_node)
-        elif child.name == "em":
+        elif child.name in ["em", "i"]:
             # Apply ITALIC decoration
             for text_node in _get_text_nodes_with_decorations(child):
                 text_node["textData"]["decorations"].append({"type": "ITALIC"})
@@ -89,7 +89,7 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
         # NavigableString should be handled by the caller (convert_html_to_ricos or _get_text_nodes_with_decorations)
         return ricos_nodes
 
-    if element.name == "p":
+    if element.name in ["p", "span", "b", "a"]:
         paragraph_content_nodes = _get_text_nodes_with_decorations(element)
         if paragraph_content_nodes:
             ricos_nodes.append({
@@ -227,6 +227,15 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
             "nodes": [],
             "lineBreakData": {}
         })
+    elif element.name in ["em", "i"]:
+        # Treat <em> and <i> as inline elements, wrapping their content in a paragraph.
+        paragraph_content_nodes = _get_text_nodes_with_decorations(element)
+        if paragraph_content_nodes:
+            ricos_nodes.append({
+                "type": "PARAGRAPH",
+                "nodes": paragraph_content_nodes,
+                "paragraphData": {}
+            })
     elif element.name in ["table", "tbody", "tr", "td", "caption"]:
         # Tables are not directly supported in Ricos. Convert to HTML node.
         print(f"INFO: HTML table element '{element.name}' not directly supported. Converting to HTML node.")
@@ -290,7 +299,7 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
                     }],
                     "paragraphData": {}
                 })
-        elif child.name in ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "img", "br", "table"]:
+        elif child.name in ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "img", "br", "table", "em", "i", "span", "b", "a"]:
             # These are block-level elements or elements that should result in a block-level Ricos node
             ricos_output_nodes.extend(_convert_html_element_to_ricos_nodes(child, image_importer))
         elif child.name:
