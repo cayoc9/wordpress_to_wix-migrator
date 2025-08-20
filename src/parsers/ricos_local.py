@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
+import re
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 
@@ -28,7 +29,7 @@ InlineDeco = Dict[str, Any]
 def convert_html_to_ricos_local(
     html: str,
     *,
-    image_importer: Optional[callable] = None,
+    image_importer: Optional[Callable[[str], Optional[str]]] = None,
     table_mode: str = "html",
 ) -> Dict[str, Any]:
     """
@@ -39,7 +40,10 @@ def convert_html_to_ricos_local(
       divider (hr), code (inline and block), image placeholders.
     - Tables and figures are simplified to text paragraphs in this v1.
     """
-    soup = BeautifulSoup(html or "", "html.parser")
+    # Pre-process to remove WordPress shortcodes like [caption]
+    cleaned_html = re.sub(r'\[/?caption[^\]]*\]', '', html or "", flags=re.IGNORECASE)
+    
+    soup = BeautifulSoup(cleaned_html, "html.parser")
 
     # Remove scripts/styles
     for bad in soup.find_all(["script", "style"]):
@@ -91,8 +95,10 @@ def convert_html_to_ricos_local(
 
             # Replace images as text placeholders
             if name == "img":
-                alt = child.get("alt") or "imagem"
-                src = child.get("src") or ""
+                alt_attr = child.get("alt")
+                alt = alt_attr[0] if isinstance(alt_attr, list) else alt_attr or "imagem"
+                src_attr = child.get("src")
+                src = src_attr[0] if isinstance(src_attr, list) else src_attr or ""
                 if image_importer and src:
                     try:
                         media_id = image_importer(src)
@@ -158,9 +164,12 @@ def convert_html_to_ricos_local(
             # Tables/figures handling
             # Try to extract image inside figure
             img = el.find("img")
-            if img and image_importer:
-                src = img.get("src") or ""
-                alt = img.get("alt") or None
+            if isinstance(img, Tag) and image_importer:
+                src_attr = img.get("src")
+                src = src_attr[0] if isinstance(src_attr, list) else src_attr or ""
+                alt_attr = img.get("alt")
+                alt = alt_attr if isinstance(alt_attr, str) else None
+
                 if src:
                     try:
                         media_id = image_importer(src)
@@ -185,7 +194,8 @@ def convert_html_to_ricos_local(
                             rows.append(cells)
                     if rows:
                         # crude header rows detection: if any th in first row
-                        header_rows = 1 if el.find("tr") and el.find("tr").find("th") else 0
+                        first_row = el.find("tr")
+                        header_rows = 1 if first_row and first_row.find("th") else 0
                         nodes.append(table_node_simple(rows, header_rows=header_rows))
                         return
                 # paragraphs fallback

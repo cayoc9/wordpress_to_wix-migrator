@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from src.extractors.wordpress_extractor import extract_posts_from_csv, extract_posts_from_xml
 from src.parsers.ricos_parser import convert_html_to_ricos
@@ -44,31 +44,36 @@ class WordPressMigrationTool:
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None, *, config_file: Optional[str] = None) -> None:
+        # Initialize self.config as an empty dict to ensure it's never None
+        self.config = {}
+
         if config_file and os.path.exists(config_file):
-            with open(config_file, "r", encoding="utf-8") as f:
-                config = json.load(f)
-        elif config is None:
-            # Default configuration
-            config = {}
+            try:
+                with open(config_file, "r", encoding="utf-8") as f:
+                    loaded_config = json.load(f)
+                self.config.update(loaded_config)
+            except (json.JSONDecodeError, IOError) as e:
+                self.log_message(f"Could not load or parse config file {config_file}: {e}", level="WARNING")
+        
+        if config:
+            self.config.update(config)
 
         # Ensure essential keys exist to prevent KeyErrors
-        config.setdefault("wix", {})
-        config["wix"].setdefault("app_id", os.getenv("WIX_APP_ID", ""))
-        config["wix"].setdefault("app_secret", os.getenv("WIX_APP_SECRET", ""))
-        config["wix"].setdefault("instance_id", os.getenv("WIX_INSTANCE_ID", ""))
-        config["wix"].setdefault("access_token", "")
-        config["wix"].setdefault("member_id", "")
+        self.config.setdefault("wix", {})
+        self.config["wix"].setdefault("app_id", os.getenv("WIX_APP_ID", ""))
+        self.config["wix"].setdefault("app_secret", os.getenv("WIX_APP_SECRET", ""))
+        self.config["wix"].setdefault("instance_id", os.getenv("WIX_INSTANCE_ID", ""))
+        self.config["wix"].setdefault("access_token", "")
+        self.config["wix"].setdefault("member_id", "")
         # Site-scoped header support
-        config["wix"].setdefault("site_id", os.getenv("WIX_SITE_ID", ""))
-        config["wix"].setdefault("base_url", "https://www.wixapis.com")
+        self.config["wix"].setdefault("site_id", os.getenv("WIX_SITE_ID", ""))
+        self.config["wix"].setdefault("base_url", "https://www.wixapis.com")
 
-        config.setdefault("migration", {})
-        config["migration"].setdefault("dry_run", False)
-        config["migration"].setdefault("limit", None)
-        config["migration"].setdefault("wordpress_domain", "")
-        config["migration"].setdefault("wix_site_url", "")
-        
-        self.config = config
+        self.config.setdefault("migration", {})
+        self.config["migration"].setdefault("dry_run", False)
+        self.config["migration"].setdefault("limit", None)
+        self.config["migration"].setdefault("wordpress_domain", "")
+        self.config["migration"].setdefault("wix_site_url", "")
         self.member_map_file = "reports/member_map.json"
         self.email_to_member_id_map: Dict[str, str] = {}
         self.default_member_id: Optional[str] = None
@@ -145,7 +150,7 @@ class WordPressMigrationTool:
 
         dry_run: bool = self.config.get("migration", {}).get("dry_run", False)
         limit: Optional[int] = self.config.get("migration", {}).get("limit")
-        migrated: List[Dict[str, str]] = []
+        migrated: List[Dict[str, Optional[str]]] = []
         count = 0
 
         # Populate the initial email to member ID map
@@ -299,10 +304,14 @@ class WordPressMigrationTool:
                             ricos,
                             member_id=member_id
                         )
-                    except Exception as e:
-                        error_details = e.response.text if hasattr(e, "response") else str(e)
+                    except requests.exceptions.HTTPError as e:
+                        error_details = e.response.text if e.response else str(e)
                         report_error("WIX_NETWORK", post, e)
-                        self.log_message(f"Network error creating draft for post '{slug}': {error_details}", "ERROR")
+                        self.log_message(f"HTTP error creating draft for post '{slug}': {error_details}", "ERROR")
+                        continue
+                    except Exception as e:
+                        report_error("WIX_NETWORK", post, e)
+                        self.log_message(f"Generic error creating draft for post '{slug}': {e}", "ERROR")
                         continue
                 
                 draft_id = (draft_resp.get("draftPost") or {}).get("id")
@@ -320,19 +329,26 @@ class WordPressMigrationTool:
                     try:
                         pub_resp = publish_post(self.config["wix"], draft_id)
                         new_url = (pub_resp.get("post") or {}).get("url") or f"{new_base_url.rstrip('/')}/post/{slug}"
-                    except Exception as e:
-                        error_details = e.response.text if hasattr(e, "response") else str(e)
+                    except requests.exceptions.HTTPError as e:
+                        error_details = e.response.text if e.response else str(e)
                         report_error("PUBLISH", post, e)
                         self.log_message(f"Failed to publish post '{slug}': {error_details}", "ERROR")
+                        continue
+                    except Exception as e:
+                        report_error("PUBLISH", post, e)
+                        self.log_message(f"Generic error publishing post '{slug}': {e}", "ERROR")
                         continue
                 
                 migrated.append({"Slug": slug, "Permalink": post.get("Permalink"), "NewURL": new_url})
                 report_ok("PUBLISHED", post, {"url": new_url})
 
-            except Exception as e:
-                error_details = e.response.text if hasattr(e, "response") else str(e)
+            except requests.exceptions.HTTPError as e:
+                error_details = e.response.text if e.response else str(e)
                 report_error("WIX_NETWORK", post, e)
-                self.log_message(f"An unexpected error occurred while migrating post '{slug}': {error_details}", "ERROR")
+                self.log_message(f"An unexpected HTTP error occurred while migrating post '{slug}': {error_details}", "ERROR")
+            except Exception as e:
+                report_error("WIX_NETWORK", post, e)
+                self.log_message(f"An unexpected generic error occurred while migrating post '{slug}': {e}", "ERROR")
 
         # Generate redirects
         try:

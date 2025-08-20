@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+import random
+
+
+def generate_ricos_id() -> str:
+    return "".join(random.choices("abcdefghijklmnopqrstuvwxyz0123456789", k=8))
 
 
 # --- Builders for common Ricos nodes ---
@@ -10,35 +15,36 @@ def doc(nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def paragraph(text_nodes: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
-    return {"type": "PARAGRAPH", "nodes": text_nodes or []}
+    return {"id": generate_ricos_id(), "type": "PARAGRAPH", "nodes": text_nodes or []}
 
 
 def heading(level: int, text_nodes: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     lvl = max(1, min(6, int(level or 1)))
-    return {"type": "HEADING", "level": lvl, "nodes": text_nodes or []}
+    return {"id": generate_ricos_id(), "type": "HEADING", "level": lvl, "nodes": text_nodes or []}
 
 
 def blockquote(nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
-    return {"type": "BLOCKQUOTE", "nodes": nodes}
+    return {"id": generate_ricos_id(), "type": "BLOCKQUOTE", "nodes": nodes}
 
 
 def divider() -> Dict[str, Any]:
-    return {"type": "DIVIDER"}
+    return {"id": generate_ricos_id(), "type": "DIVIDER"}
 
 
 def code_block(text: str) -> Dict[str, Any]:
-    return {"type": "CODE_BLOCK", "nodes": [text_node(text)]}
+    return {"id": generate_ricos_id(), "type": "CODE_BLOCK", "nodes": [text_node(text)]}
 
 
 def list_container(ordered: bool, items: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {
+        "id": generate_ricos_id(),
         "type": "ORDERED_LIST" if ordered else "BULLETED_LIST",
         "nodes": items,
     }
 
 
 def list_item(nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
-    return {"type": "LIST_ITEM", "nodes": nodes}
+    return {"id": generate_ricos_id(), "type": "LIST_ITEM", "nodes": nodes}
 
 
 def text_node(text: str, decorations: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
@@ -57,6 +63,7 @@ def deco(deco_type: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any
 
 def image_node_wix_media(media_id: str, caption: Optional[str] = None) -> Dict[str, Any]:
     node: Dict[str, Any] = {
+        "id": generate_ricos_id(),
         "type": "IMAGE",
         "data": {
             "src": {"id": media_id}
@@ -69,6 +76,7 @@ def image_node_wix_media(media_id: str, caption: Optional[str] = None) -> Dict[s
 
 def html_block(raw_html: str) -> Dict[str, Any]:
     return {
+        "id": generate_ricos_id(),
         "type": "HTML",
         "data": {"html": raw_html or ""}
     }
@@ -87,6 +95,7 @@ def table_node_simple(rows: List[List[str]], header_rows: int = 0) -> Dict[str, 
             cells.append({"nodes": [paragraph([text_node(text)])]})
         data_rows.append({"cells": cells})
     return {
+        "id": generate_ricos_id(),
         "type": "TABLE",
         "data": {
             "rows": data_rows,

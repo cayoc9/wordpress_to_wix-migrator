@@ -36,7 +36,7 @@ import csv
 from typing import Dict, List
 from urllib.parse import urlparse
 
-def generate_redirects_csv(migrated: List[Dict[str, str]], *, old_domain: str = "", new_base: str = "") -> None:
+def generate_redirects_csv(migrated: List[Dict[str, Optional[str]]], *, old_domain: str = "", new_base: str = "") -> None:
     """
     Generate a CSV file mapping old WordPress URLs to new Wix URLs.
 

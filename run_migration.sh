@@ -6,4 +6,4 @@
 cd "$(dirname "$0")"
 
 # Run the main script
-python3 main.py
+./.venv/bin/python main.py

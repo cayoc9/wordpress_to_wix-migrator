@@ -6,9 +6,10 @@
     "site_id": "d9be6395-e7a7-49c1-ac38-a91bda31b78e"
   },
   "migration": {
-    "wordpress_domain": "",
-    "wix_site_url": "",
+    "wordpress_domain": "otimizeseunegocio.com",
+    "wix_site_url": "https://acesso726.wixstudio.com/otimize",
     "dry_run": false,
-    "limit": 3
+    "limit": 3,
+    "table_mode": "plugin"
   }
 }
