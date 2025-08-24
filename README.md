@@ -79,3 +79,31 @@ python3 main.py
 O script irá processar os arquivos de exportação do WordPress (`.xml` e `.csv`) localizados na pasta `docs/` e tentará migrar os posts para o seu site Wix. O progresso e quaisquer erros serão registrados no console e em `reports/migration/migration.log`.
 
 Um arquivo `reports/redirect_map.csv` será gerado com o mapeamento das URLs antigas do WordPress para as novas URLs do Wix, útil para configurar redirecionamentos 301.
+
+## Scripts
+
+- `scripts/update_wix_post.js`: Atualiza um post do Wix Blog via API REST.
+  - Requisitos: Node 18+, `WIX_API_KEY`, `WIX_SITE_ID`.
+  - Uso básico:
+    - Atualizar rascunho:
+      `node scripts/update_wix_post.js --post-id <uuid> --file data/posts/<arquivo>.json`
+    - Atualizar e publicar:
+      `node scripts/update_wix_post.js --post-id <uuid> --file data/posts/<arquivo>.json --publish`
+  - Fluxo adotado:
+    1) Busca o post e obtém `revision`.
+    2) Se está publicado, garante rascunho (create-draft quando disponível).
+    3) Envia `PATCH` com os campos presentes no JSON local e `revision` atual.
+    4) Se `--publish`, chama `publish` ao final.
+  - Observações:
+    - O ID do post é estável entre rascunho e publicado.
+    - A API usa controle por `revision`. Se desatualizada, a API retorna erro de concorrência.
+    - É necessário conceder escopo `wix-blog.manage-posts` à API Key.
+
+- `scripts/update_wix_post.py`: Versão equivalente em Python do atualizador de posts.
+  - Requisitos: Python 3.8+, `requests`, `WIX_API_KEY`, `WIX_SITE_ID`.
+  - Uso básico:
+    - Atualizar rascunho:
+      `python scripts/update_wix_post.py --post-id <uuid> --file data/posts/<arquivo>.json`
+    - Atualizar e publicar:
+      `python scripts/update_wix_post.py --post-id <uuid> --file data/posts/<arquivo>.json --publish`
+  - Fluxo e observações: idênticos ao script em Node.
