@@ -2,6 +2,7 @@
 import requests
 import os
 import json
+import argparse
 
 def get_wix_auth_token():
     """
@@ -15,13 +16,15 @@ def get_wix_auth_token():
         config = json.load(f)
         return config.get('wix', {}).get('access_token')
 
-def get_wix_post_content(post_id, auth_token):
+def get_wix_post_content(post_id, auth_token, save_file=False):
     """
-    Fetches the content of a Wix post and saves it to a file.
+    Fetches the content of a Wix post and optionally saves it to a file.
 
     Args:
         post_id (str): The ID of the post to fetch.
         auth_token (str): Your Wix authorization token.
+        save_file (bool): If True, saves the post content to a JSON file. 
+                          Otherwise, prints to stdout.
     """
     headers = {
         "Authorization": auth_token
@@ -49,26 +52,41 @@ def get_wix_post_content(post_id, auth_token):
         else:
             print(f"Warning: Could not retrieve richContent for post {post_id}.")
 
-        # Create the directory if it doesn't exist
-        output_dir = "data/posts"
-        os.makedirs(output_dir, exist_ok=True)
+        if save_file:
+            # Create the directory if it doesn't exist
+            output_dir = "data/posts"
+            os.makedirs(output_dir, exist_ok=True)
 
-        # Save the combined post object to a file
-        output_path = os.path.join(output_dir, f"{post_id}.json")
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(post_object, f, ensure_ascii=False, indent=4)
-
-        print(f"Successfully saved post content to {output_path}")
+            # Save the combined post object to a file
+            output_path = os.path.join(output_dir, f"{post_id}.json")
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(post_object, f, ensure_ascii=False, indent=4)
+            print(f"Successfully saved post content to {output_path}")
+        else:
+            # Print the JSON to stdout
+            print(json.dumps(post_object, ensure_ascii=False, indent=4))
 
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
     except json.JSONDecodeError:
         print("Failed to decode JSON response.")
 
-if __name__ == "__main__":
-    post_id_input = input("Enter the Wix post ID: ")
+def main():
+    """Main function to parse arguments and fetch post content."""
+    parser = argparse.ArgumentParser(description="Fetch a Wix post by its ID.")
+    parser.add_argument("post_id", help="The ID of the Wix post to fetch.")
+    parser.add_argument(
+        "--save-file",
+        action="store_true",
+        help="Save the post content to a JSON file in data/posts/."
+    )
+    args = parser.parse_args()
+
     auth_token = get_wix_auth_token()
     if auth_token:
-        get_wix_post_content(post_id_input, auth_token)
+        get_wix_post_content(args.post_id, auth_token, args.save_file)
     else:
         print("Could not find Wix auth token in config/migration_config.json")
+
+if __name__ == "__main__":
+    main()

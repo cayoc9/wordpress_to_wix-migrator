@@ -9,17 +9,14 @@ Uso:
     [--out data/published_posts.json] \
     [--limit 10000] \
     [--all] \
-    [--details] \
-    [--only-ids]
+    [--details]
 
 Autenticação:
   - Lê primeiro de variáveis de ambiente: WIX_API_KEY (ou WIX_ACCESS_TOKEN), WIX_SITE_ID
   - Fallback para config/migration_config.json em: wix.api_key, wix.access_token, wix.site_id
 
 Notas:
-  - Quando possível, usa GET /blog/v3/posts com fieldsets configurável (padrão STATUS,URL,SEO para metadados úteis).
   - Com --details, enriquece cada item com GET /blog/v3/posts/{id}?fieldsets=URL,SEO (e mantém demais campos).
-  - Com --only-ids, retorna somente os IDs de posts publicados (mais rápido) e usa fieldsets mínimos.
 """
 
 from __future__ import annotations
@@ -32,6 +29,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+
 import requests
 
 BASE_URL = "https://www.wixapis.com/blog/v3"
@@ -40,7 +38,6 @@ BASE_URL = "https://www.wixapis.com/blog/v3"
 def die(msg: str, code: int = 1) -> None:
     print(msg, file=sys.stderr)
     sys.exit(code)
-
 
 def load_wix_config() -> Dict[str, Any]:
     cfg_path = Path(__file__).parent.parent / "config" / "migration_config.json"
@@ -51,24 +48,35 @@ def load_wix_config() -> Dict[str, Any]:
             return {}
     return {}
 
+def resolve_auth() -> tuple[Optional[str], Optional[str]]:
+    # Tenta carregar o token do wix_token.json primeiro
+    token_path = Path(__file__).parent.parent / "wix_token.json"
+    access_token = None
+    if token_path.exists():
+        try:
+            token_data = json.loads(token_path.read_text(encoding="utf-8"))
+            access_token = token_data.get("access_token")
+        except Exception:
+            pass
 
-def resolve_auth() -> tuple[str, Optional[str]]:
     cfg = load_wix_config()
     wix_cfg = cfg.get("wix", {}) if isinstance(cfg, dict) else {}
-    # Prefer API Key; fallback para access_token
+
+    # Prioridade: Token do wix_token.json > WIX_API_KEY > wix.api_key > WIX_ACCESS_TOKEN > wix.access_token
     authorization = (
-        os.getenv("WIX_API_KEY")
+        access_token
+        or os.getenv("WIX_API_KEY")
         or wix_cfg.get("api_key")
         or os.getenv("WIX_ACCESS_TOKEN")
         or wix_cfg.get("access_token")
     )
     site_id = os.getenv("WIX_SITE_ID") or wix_cfg.get("site_id")
+
     if not authorization:
         die(
-            "Token não encontrado. Defina WIX_API_KEY/WIX_ACCESS_TOKEN ou preencha wix.api_key/access_token em config/migration_config.json"
+            "Token/API Key não encontrado. Gere um token com 'generate_wix_token.py' ou configure WIX_API_KEY/WIX_ACCESS_TOKEN."
         )
     return authorization, site_id
-
 
 def wix_request(method: str, path: str, *, json_body: Dict[str, Any] | None = None) -> Dict[str, Any] | None:
     authorization, site_id = resolve_auth()
@@ -81,107 +89,60 @@ def wix_request(method: str, path: str, *, json_body: Dict[str, Any] | None = No
         headers["wix-site-id"] = site_id
     resp = requests.request(method, url, headers=headers, json=json_body, timeout=30)
     if not resp.ok:
-        try:
-            data = resp.json()
-        except Exception:
-            data = None
-        msg = data.get("message") if isinstance(data, dict) else resp.text
-        details = data.get("details") if isinstance(data, dict) else None
-        err = f"Falha {resp.status_code} em {method} {path}: {msg}"
-        if details:
-            err += f"\nDetalhes: {json.dumps(details, ensure_ascii=False)}"
-        die(err)
+        content_type = resp.headers.get("Content-Type", "")
+        if "application/json" in content_type:
+            try:
+                data = resp.json()
+            except Exception:
+                data = None
+            msg = data.get("message") if isinstance(data, dict) else resp.text
+            details = data.get("details") if isinstance(data, dict) else None
+            err = f"Falha {resp.status_code} em {method} {path}: {msg}"
+            if details:
+                err += f"\nDetalhes: {json.dumps(details, ensure_ascii=False)}"
+            die(err)
+        else:
+            die(f"Falha {resp.status_code} em {method} {path}:\n{resp.text}")
     try:
         return resp.json()
     except Exception:
         return None
 
-
 def query_published_posts(limit_total: int = 10000, fetch_all: bool = False, *, only_ids: bool = False) -> List[Dict[str, Any]]:
+
     posts: List[Dict[str, Any]] = []
     fetched = 0
-    page_size = 100 if limit_total > 100 else limit_total
+    page_size = 50
+    offset = 0
 
-    # 1) Tentar GET com paginação (observado como válido em ambientes Wix)
-    try:
-        offset = 0
-        while True:
-            # Tentar trazer apenas o necessário na listagem
-            fieldsets = "STATUS" if only_ids else "STATUS,URL,SEO"
-            path = f"/posts?fieldsets={fieldsets}&limit={page_size}&offset={offset}"
-            data = wix_request("GET", path)
-            page_posts = data.get("posts") or []
-            if not page_posts:
-                break
-            posts.extend(page_posts)
-            fetched += len(page_posts)
-            offset += page_size
-            if (not fetch_all) and fetched >= limit_total:
-                break
-    except SystemExit:
-        # Prosseguir para fallback via POST /query
-        posts = []
-        fetched = 0
-
-    if posts:
-        # Filtrar publicados quando houver status/flags
-        def is_published(p: Dict[str, Any]) -> bool:
-            s = p.get("status") or p.get("state")
-            if s:
-                return s == "PUBLISHED"
-            # Heurística: publicados costumam ter firstPublishedDate e preview == false
-            return bool(p.get("firstPublishedDate")) and (p.get("preview") is False)
-
-        return [p for p in posts if is_published(p)]
-
-    # 2) Fallback: POST /posts/query com filtros e paginação por cursor/offset
-    next_cursor: Optional[str] = None
     while True:
-        body: Dict[str, Any] = {
+        body = {
             "query": {
                 "filter": {"status": "PUBLISHED"},
                 "sort": [{"fieldName": "lastPublishedDate", "order": "DESC"}],
+                "paging": {"limit": page_size, "offset": offset},
             }
         }
-        if next_cursor:
-            body["query"]["cursorPaging"] = {"cursor": next_cursor}
-        else:
-            body["query"]["cursorPaging"] = {"limit": page_size}
-
+        # Se estiver buscando apenas IDs, usar fieldsets mínimos para otimização
+        if only_ids:
+            body["query"]["fieldsets"] = ["ID"]
         data = wix_request("POST", "/posts/query", json_body=body)
+        if data is None:
+            break
+
         page_posts = data.get("posts") or []
-        paging = data.get("paging") or {}
-        next_cursor = paging.get("next")
         posts.extend(page_posts)
         fetched += len(page_posts)
-        if not next_cursor or not page_posts:
+
+        if not page_posts:
             break
+
+        offset += page_size
+
         if (not fetch_all) and fetched >= limit_total:
             break
 
-    if not posts:
-        # 3) Fallback final: POST /posts/query com offset (sem cursor)
-        offset = 0
-        while True:
-            body = {
-                "query": {
-                    "filter": {"status": "PUBLISHED"},
-                    "sort": [{"fieldName": "lastPublishedDate", "order": "DESC"}],
-                    "paging": {"limit": page_size, "offset": offset},
-                }
-            }
-            data = wix_request("POST", "/posts/query", json_body=body)
-            page_posts = data.get("posts") or []
-            posts.extend(page_posts)
-            fetched += len(page_posts)
-            if not page_posts:
-                break
-            offset += page_size
-            if (not fetch_all) and fetched >= limit_total:
-                break
-
     return posts
-
 
 def pick_metadata(p: Dict[str, Any]) -> Dict[str, Any]:
     keys = [
@@ -201,7 +162,6 @@ def pick_metadata(p: Dict[str, Any]) -> Dict[str, Any]:
     out = {k: p.get(k) for k in keys}
     return out
 
-
 def enrich_with_details(posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     enriched: List[Dict[str, Any]] = []
     for p in posts:
@@ -216,13 +176,13 @@ def enrich_with_details(posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             merged = dict(p)
             # Mesclar sem perder campos existentes
             for k, v in detail_post.items():
-                if k not in merged or merged[k] in (None, [], {}):
+                if k not in merged or merged[k] in (None, []) or (isinstance(merged[k], dict) and not merged[k]):
+
                     merged[k] = v
             enriched.append(merged)
         else:
             enriched.append(p)
     return enriched
-
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Lista posts publicados do Wix Blog e salva em JSON")
@@ -239,6 +199,7 @@ def main(argv: list[str]) -> int:
 
     print("➡️  Consultando posts publicados no Wix Blog...")
     posts = query_published_posts(limit_total=args.limit, fetch_all=args.all, only_ids=args.only_ids)
+
     # Garantir que não ultrapasse o limite solicitado (pode vir em blocos de 100)
     if not args.all and len(posts) > args.limit:
         posts = posts[:args.limit]
@@ -258,6 +219,7 @@ def main(argv: list[str]) -> int:
         out_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"✔️  {len(ids)} IDs salvos em: {out_path}")
         return 0
+
     if args.details:
         print("➡️  Enriquecendo com detalhes (URL/SEO)...")
         posts = enrich_with_details(posts)
