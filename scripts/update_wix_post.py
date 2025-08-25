@@ -1,296 +1,262 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
-Atualiza um post do Wix Blog via REST API.
+Atualiza um draft post do Wix Blog (v3) lendo:
+- Token de autorização em config/migration_config.json (wix.access_token)
+- Conteúdo do post a partir de um arquivo JSON salvo em data/posts/<post_id>.json
 
-Este script lida com a atualização de posts, quer estejam em estado de rascunho
-ou já publicados.
-
-- Se o post estiver publicado, ele primeiro cria uma nova versão de rascunho
-  com as atualizações e, opcionalmente, publica essa nova versão.
-- Se o post já for um rascunho, ele simplesmente o atualiza.
-
-Pré-requisitos:
-- Python 3.8+
-- Dependências: requests (ver requirements.txt)
-- Arquivo de configuração: config/migration_config.json com wix.api_key e wix.site_id
-  ou variáveis de ambiente WIX_API_KEY e WIX_SITE_ID.
-
-Uso:
-  python scripts/update_wix_post.py \
-    --post-id <uuid-do-post> \
-    --file data/posts/<uuid-do-post>.json \
-    [--publish]
+Também permite sobrepor campos via argumentos (title, excerpt, texto simples, richcontent-file),
+agendar publicação ou publicar imediatamente.
 """
-
-from __future__ import annotations
 
 import argparse
 import json
 import os
 import sys
-from pathlib import Path
+import time
 from typing import Any, Dict, Optional
 
 import requests
 
-# A API de Blog v3 é o padrão moderno.
-BASE_URL = "https://www.wixapis.com/blog/v3"
+BASE_DRAFT_URL = "https://www.wixapis.com/blog/v3/draft-posts"
+MAX_RETRIES = 5
+RETRY_BASE_DELAY = 1.5  # segundos
 
 
-def die(msg: str, code: int = 1) -> None:
-    """Imprime uma mensagem de erro para stderr e encerra o script."""
-    print(f"ERRO: {msg}", file=sys.stderr)
-    sys.exit(code)
+def load_config() -> Dict[str, Any]:
+    cfg_path = os.path.join(os.path.dirname(__file__), "..", "config", "migration_config.json")
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
-def parse_args(argv: list[str]) -> argparse.Namespace:
-    """Analisa os argumentos da linha de comando."""
-    p = argparse.ArgumentParser(
-        description=(
-            "Atualiza um post do Wix Blog (publicado ou rascunho).\n\n"
-            "Exemplo de uso:\n"
-            "python scripts/update_wix_post.py --post-id 774b42ef-b746-4b6f-8239-4e6f3f39841f "
-            "--file data/posts/774b42ef-b746-4b6f-8239-4e6f3f39841f.json --publish"
-        ),
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
-    p.add_argument("--post-id", help="ID do post (UUID) a ser atualizado.")
-    p.add_argument(
-        "--file",
-        help="Caminho para o arquivo JSON local com os dados do post. "
-        "Se não for fornecido, o padrão é data/posts/<post-id>.json.",
-    )
-    p.add_argument(
-        "--publish",
-        action="store_true",
-        help="Publica o post imediatamente após a atualização. "
-        "Se o post já estava publicado, isto publica as novas alterações.",
-    )
-    return p.parse_args(argv)
+def backoff_sleep(attempt: int) -> None:
+    delay = RETRY_BASE_DELAY * (2 ** (attempt - 1))
+    time.sleep(delay)
 
 
-def load_wix_config() -> Dict[str, Any]:
-    """Carrega a configuração do arquivo migration_config.json."""
-    cfg_path = Path(__file__).parent.parent / "config" / "migration_config.json"
-    if cfg_path.exists():
-        try:
-            return json.loads(cfg_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Aviso: Não foi possível ler o arquivo de configuração: {e}")
-            return {}
-    return {}
-
-
-def resolve_auth() -> tuple[str, str]:
-    """
-    Resolve o token de autenticação e o ID do site.
-
-    A ordem de prioridade é:
-    1. Variáveis de ambiente (WIX_API_KEY, WIX_SITE_ID).
-    2. Arquivo de configuração (config/migration_config.json).
-
-    Retorna:
-        Uma tupla contendo (cabeçalho_de_autorização, site_id).
-    """
-    cfg = load_wix_config()
-    wix_cfg = cfg.get("wix", {})
-
-    # Usa a API Key que é mais segura para operações de escrita.
-    api_key = os.getenv("WIX_API_KEY") or wix_cfg.get("api_key")
-    site_id = os.getenv("WIX_SITE_ID") or wix_cfg.get("site_id")
-
-    if not api_key:
-        die(
-            "API Key não encontrada. Defina WIX_API_KEY ou configure 'wix.api_key' "
-            "em config/migration_config.json."
-        )
-
-    if not site_id:
-        die(
-            "Site ID não encontrado. Defina WIX_SITE_ID ou configure 'wix.site_id' "
-            "em config/migration_config.json."
-        )
-
-    # O cabeçalho de autorização é a própria chave.
-    return api_key, site_id
-
-
-def wix_request(
-    method: str,
-    path: str,
-    *, 
-    json_body: Dict[str, Any] | None = None,
-    params: Dict[str, Any] | None = None,
-) -> Dict[str, Any]:
-    """
-    Envia uma requisição para a API do Wix e trata a resposta.
-
-    Args:
-        method: Método HTTP (GET, POST, PATCH, etc.).
-        path: Caminho da API (ex: /posts/some-id).
-        json_body: Corpo da requisição em formato de dicionário.
-        params: Parâmetros de consulta (query string).
-
-    Returns:
-        A resposta da API em formato de dicionário.
-    """
-    authorization, site_id = resolve_auth()
-    url = f"{BASE_URL}{path}"
+def do_request(method: str, url: str, token: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     headers = {
-        "Authorization": authorization,
         "Content-Type": "application/json",
-        "wix-site-id": site_id,
+        "Authorization": token,
+    }
+    attempt = 0
+    while True:
+        attempt += 1
+        resp = requests.request(method, url, headers=headers, json=payload, timeout=30)
+        if resp.status_code in (200, 201, 202, 204):
+            if resp.text:
+                try:
+                    return resp.json()
+                except json.JSONDecodeError:
+                    return {}
+            return {}
+        if resp.status_code in (429, 500, 502, 503, 504) and attempt < MAX_RETRIES:
+            backoff_sleep(attempt)
+            continue
+
+        try:
+            detail = resp.json()
+        except Exception:
+            detail = resp.text
+        raise RuntimeError(f"Erro {resp.status_code} em {method} {url}: {detail}")
+
+
+def make_simple_rich_content(paragraph_text: str) -> Dict[str, Any]:
+    return {
+        "nodes": [
+            {
+                "type": "PARAGRAPH",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "textData": {"text": paragraph_text},
+                    }
+                ],
+            }
+        ]
     }
 
-    try:
-        resp = requests.request(
-            method, url, headers=headers, json=json_body, params=params, timeout=30
-        )
-        resp.raise_for_status()  # Lança uma exceção para respostas de erro (4xx ou 5xx)
-        if resp.content:
-            return resp.json()
-        return {}
-    except requests.exceptions.RequestException as e:
-        # Tenta extrair uma mensagem de erro mais clara do corpo da resposta
-        try:
-            error_data = e.response.json()
-            message = error_data.get("message", e.response.text)
-            details = error_data.get("details", {})
-            die(f"Falha na API ({e.response.status_code}): {message}\nDetalhes: {details}")
-        except (json.JSONDecodeError, AttributeError):
-            die(f"Falha na comunicação com a API do Wix: {e}")
 
-
-def get_post(post_id: str) -> Dict[str, Any]:
-    """Busca os dados de um post (publicado ou rascunho)."""
-    # A API de Posts consegue ler tanto publicados quanto rascunhos pelo mesmo ID.
-    data = wix_request("GET", f"/posts/{post_id}")
-    # A resposta pode vir aninhada em { "post": {...} }
-    return data.get("post", data)
-
-
-def update_post(
-    post_id: str,
-    payload: Dict[str, Any],
-    is_published: bool
+def update_draft_post(
+    token: str,
+    draft_id: str,
+    draft_fields: Dict[str, Any],
+    action: str = "UPDATE",
+    scheduled_publish_date: Optional[str] = None,
+    dry_run: bool = False,
 ) -> Dict[str, Any]:
-    """
-    Atualiza um post, seja ele um rascunho ou um post já publicado.
+    url = f"{BASE_DRAFT_URL}/{draft_id}"
+    body: Dict[str, Any] = {"action": action}
 
-    Args:
-        post_id: O ID do post a ser atualizado.
-        payload: O dicionário com os campos a serem atualizados.
-        is_published: Um booleano que indica se o post está atualmente publicado.
-
-    Returns:
-        O post atualizado.
-    """
-    params = {}
-    if is_published:
-        # Se o post já está publicado, usamos a ação 'UPDATE_PUBLICATION'.
-        # Isso cria um novo rascunho com as alterações, mantendo o post original no ar.
-        params["action"] = "UPDATE_PUBLICATION"
-        print("INFO: Post está publicado. Criando rascunho com as alterações...")
+    if action == "UPDATE":
+        body["draftPost"] = draft_fields
+    elif action == "UPDATE_SCHEDULE":
+        body["draftPost"] = {"scheduledPublishDate": scheduled_publish_date}
     else:
-        print("INFO: Atualizando rascunho existente...")
+        raise ValueError("action deve ser 'UPDATE' ou 'UPDATE_SCHEDULE'")
 
-    # A atualização é sempre feita no endpoint de 'draft-posts'.
-    # A API do Wix é inteligente o suficiente para lidar com isso usando o mesmo ID.
-    data = wix_request(
-        "PATCH", f"/draft-posts/{post_id}", json_body={"draftPost": payload}, params=params
-    )
-    return data.get("draftPost", data)
+    if dry_run:
+        print("---- DRY RUN: Payload UPDATE ----")
+        print(json.dumps(body, ensure_ascii=False, indent=2))
+        return {}
 
-
-def publish_post(post_id: str) -> None:
-    """Publica a versão mais recente de um rascunho de post."""
-    wix_request("POST", f"/posts/{post_id}/publish", json_body={})
+    return do_request("PATCH", url, token, body)
 
 
-def build_update_payload(local_json: Dict[str, Any]) -> Dict[str, Any]:
+def publish_draft_post(token: str, draft_id: str, dry_run: bool = False) -> Dict[str, Any]:
+    url = f"{BASE_DRAFT_URL}/{draft_id}/publish"
+    if dry_run:
+        print("---- DRY RUN: Publish would be called ----")
+        print(f"POST {url}")
+        return {}
+    return do_request("POST", url, token, None)
+
+
+def load_post_fields_from_file(post_file: str) -> Dict[str, Any]:
+    """Extrai campos relevantes (title, excerpt, richContent) do JSON salvo em data/posts/<id>.json.
+
+    O arquivo salvo por scripts/get_wix_post.py contém o objeto "post" já "flattened". Este loader
+    tenta ler chaves comuns e ignora as ausentes.
     """
-    Filtra o JSON local para incluir apenas os campos permitidos para atualização.
-    """
-    allowed_fields = {
-        "title",
-        "excerpt",
-        "slug",
-        "featured",
-        "pinned",
-        "categoryIds",
-        "coverMedia",
-        "hashtags",
-        "minutesToRead",
-        "tagIds",
-        "language",
-        "media",
-        "richContent",
-        "seoData",
-        "seoSlug",
-    }
-    # Retorna um novo dicionário contendo apenas as chaves permitidas que existem no JSON local.
-    return {key: local_json[key] for key in allowed_fields if key in local_json}
+    with open(post_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # Se por algum motivo vier envolto em {"post": {...}}, desembrulha
+    if isinstance(data, dict) and "post" in data and isinstance(data["post"], dict):
+        data = data["post"]
+
+    def sanitize_node_types(node: Dict[str, Any]):
+        t = node.get("type")
+        # Corrige tipos de lista para os esperados pela API (Ricos)
+        if t == "NUMBERED_LIST":
+            node["type"] = "ORDERED_LIST"
+        elif t == "BULLETED_LIST":
+            node["type"] = "UNORDERED_LIST"
+        # Recurse em nodes filhos
+        for child_key in ("nodes",):
+            if isinstance(node.get(child_key), list):
+                for child in node[child_key]:
+                    if isinstance(child, dict):
+                        sanitize_node_types(child)
+
+    fields: Dict[str, Any] = {}
+    if isinstance(data, dict):
+        if data.get("title"):
+            fields["title"] = data["title"]
+        if data.get("excerpt"):
+            fields["excerpt"] = data["excerpt"]
+        if data.get("richContent"):
+            rc = data["richContent"]
+            # Sanitiza árvore de conteúdo para compatibilidade
+            if isinstance(rc, dict) and isinstance(rc.get("nodes"), list):
+                for n in rc["nodes"]:
+                    if isinstance(n, dict):
+                        sanitize_node_types(n)
+            fields["richContent"] = rc
+    return fields
 
 
-def main(argv: list[str]) -> int:
-    """Função principal do script."""
-    args = parse_args(argv)
+def resolve_post_file(args_post_file: Optional[str], post_id: Optional[str]) -> Optional[str]:
+    if args_post_file:
+        return args_post_file
+    if post_id:
+        return os.path.join("data", "posts", f"{post_id}.json")
+    return None
 
-    post_id = args.post_id
-    if not post_id:
-        try:
-            post_id = input("Informe o ID do post Wix (UUID): ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nOperação cancelada.")
-            return 1
-    if not post_id:
-        die("O ID do post é obrigatório.")
 
-    file_path_str = args.file or f"data/posts/{post_id}.json"
-    json_path = Path(file_path_str)
+def main():
+    parser = argparse.ArgumentParser(description="Atualiza e publica/agenda um draftPost usando dados de data/posts/<id>.json e config.")
+    parser.add_argument("--draft-id", required=True, help="ID do draft post (obrigatório).")
+    parser.add_argument("--post-id", help="ID do post para localizar data/posts/<post-id>.json.")
+    parser.add_argument("--post-file", help="Caminho direto do arquivo do post (ex.: data/posts/<id>.json).")
 
-    if not json_path.is_file():
-        die(f"Arquivo JSON não encontrado em: {json_path}")
+    parser.add_argument("--title", help="Sobrescrever título.")
+    parser.add_argument("--excerpt", help="Sobrescrever excerpt.")
+    parser.add_argument("--text", help="Conteúdo simples em um parágrafo (gera richContent básico).")
+    parser.add_argument("--richcontent-file", help="Caminho para arquivo JSON contendo 'richContent'.")
 
+    parser.add_argument("--no-publish", action="store_true", help="Somente atualizar rascunho; não publicar.")
+    parser.add_argument("--schedule", help="Agendar publicação (ISO 8601, ex.: 2025-08-30T14:00:00Z).")
+    parser.add_argument("--dry-run", action="store_true", help="Mostrar payloads sem fazer chamadas.")
+
+    args = parser.parse_args()
+
+    # Carrega token do config (preferencial). Mantemos compatibilidade com env se desejar no futuro.
     try:
-        local_json = json.loads(json_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as e:
-        die(f"Falha ao decodificar o JSON do arquivo {json_path}: {e}")
-    except IOError as e:
-        die(f"Falha ao ler o arquivo {json_path}: {e}")
+        cfg = load_config()
+    except Exception as e:
+        print(f"Erro ao carregar config/migration_config.json: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    print(f"➡️  Buscando post '{post_id}' no Wix...")
-    current_post = get_post(post_id)
-    status = current_post.get("status", "UNKNOWN").upper()
-    print(f"✔️  Post localizado. Status atual: {status}")
+    token = (cfg.get("wix") or {}).get("access_token")
+    if not token:
+        print("Token não encontrado em wix.access_token no config/migration_config.json", file=sys.stderr)
+        sys.exit(1)
 
-    is_published = status == "PUBLISHED"
+    # Monta os campos do draft a partir do arquivo do post, depois aplica sobrescrições via args
+    post_file = resolve_post_file(args.post_file, args.post_id)
+    draft_fields: Dict[str, Any] = {}
+    if post_file and os.path.exists(post_file):
+        loaded_fields = load_post_fields_from_file(post_file)
+        draft_fields.update(loaded_fields)
+    elif post_file:
+        print(f"Aviso: arquivo de post não encontrado: {post_file}. Seguindo apenas com sobrescrições de argumentos.")
 
-    # Monta o payload apenas com os campos que queremos (e podemos) atualizar.
-    payload = build_update_payload(local_json)
-    if not payload:
-        print("ℹ️  Nenhum campo válido para atualização encontrado no arquivo JSON. Nada a fazer.")
-        return 0
+    # Sobrescrições via argumentos
+    if args.title:
+        draft_fields["title"] = args.title
+    if args.excerpt:
+        draft_fields["excerpt"] = args.excerpt
+    if args.richcontent_file:
+        try:
+            with open(args.richcontent_file, "r", encoding="utf-8") as f:
+                draft_fields["richContent"] = json.load(f)
+        except Exception as e:
+            print(f"Erro ao ler richContent de {args.richcontent_file}: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif args.text:
+        draft_fields["richContent"] = make_simple_rich_content(args.text)
 
-    print("➡️  Enviando atualização para o Wix...")
-    updated_post = update_post(post_id, payload, is_published)
-    new_status = updated_post.get("status", "UNKNOWN").upper()
-    print(f"✔️  Post atualizado com sucesso. Novo status do rascunho: {new_status}")
+    if not draft_fields and not args.schedule:
+        print("Nada para atualizar: informe post-file/post-id ou --title/--excerpt/--text/--richcontent-file ou --schedule.", file=sys.stderr)
+        sys.exit(1)
 
-    if args.publish:
-        print(f"➡️  Publicando alterações para o post '{post_id}'...")
-        publish_post(post_id)
-        print("✔️  Post publicado com sucesso!")
+    # 1) UPDATE
+    if draft_fields:
+        print("Atualizando rascunho (UPDATE)...")
+        update_draft_post(
+            token=token,
+            draft_id=args.draft_id,
+            draft_fields=draft_fields,
+            action="UPDATE",
+            dry_run=args.dry_run,
+        )
+        if not args.dry_run:
+            print("Rascunho atualizado.")
+
+    # 2) Agendar, se solicitado
+    if args.schedule:
+        print(f"Agendando publicação para: {args.schedule}")
+        update_draft_post(
+            token=token,
+            draft_id=args.draft_id,
+            draft_fields={},
+            action="UPDATE_SCHEDULE",
+            scheduled_publish_date=args.schedule,
+            dry_run=args.dry_run,
+        )
+        if not args.dry_run:
+            print("Publicação agendada.")
+        return
+
+    # 3) Publicar, se não desabilitado
+    if not args.no_publish:
+        print("Publicando rascunho...")
+        publish_draft_post(token=token, draft_id=args.draft_id, dry_run=args.dry_run)
+        if not args.dry_run:
+            print("Post publicado.")
     else:
-        print("\nℹ️  As alterações foram salvas como um rascunho.")
-        print("   Para publicá-las, execute o comando novamente com a flag --publish.")
-
-    return 0
+        print("--no-publish definido: apenas atualização de rascunho realizada.")
 
 
 if __name__ == "__main__":
-    # Permite que o script seja executado diretamente, passando os argumentos da linha de comando.
-    # sys.argv[1:] exclui o nome do próprio script da lista de argumentos.
-    raise SystemExit(main(sys.argv[1:]))
+    main()
