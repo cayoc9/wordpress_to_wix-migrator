@@ -140,16 +140,16 @@ cython_debug/
 
 # Ignore downloaded data if any
 #/data/*
-/posts/*
+
 
 
 /.github
-
+temp/*
 /.vscode
 
 /plan_refact.md
 /relatorio_analise.md
 /docs/*
-/posts/*
+data/posts/*
 
 
