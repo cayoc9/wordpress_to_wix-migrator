@@ -1,16 +1,17 @@
 """
-Wix API helper functions for WordPress → Wix migration.
+Funções auxiliares da API Wix para migração de WordPress → Wix.
 
-This module implements low-level interactions with the Wix REST API.
-Functions defined here perform media uploads via the two-step
-``/upload/url`` and ``/upload/complete`` endpoints, manage blog
-taxonomies (tags and categories), create draft posts with rich
-content, and publish drafts.  A simple rate limiter is included to
-respect Wix's limit of roughly 200 requests per minute per site.  A
-generic retry wrapper is provided to handle transient network errors
-and server-side rate limiting responses (429 or 5xx).
+Este módulo implementa interações de baixo nível com a API REST do Wix.
+As funções aqui definidas realizam uploads de mídia através dos endpoints
+de duas etapas ``/upload/url`` e ``/upload/complete``, gerenciam
+taxonomias de blog (tags e categorias), criam rascunhos de posts com
+conteúdo rico e publicam rascunhos. Um simples limitador de taxa está
+incluído para respeitar o limite do Wix de aproximadamente 200 requisições
+por minuto por site. Um wrapper genérico de retentativas é fornecido para
+lidar com erros de rede transitórios e respostas de limitação de taxa
+do lado do servidor (429 ou 5xx).
 
-Usage example::
+Exemplo de uso::
 
     from src.extractors.wordpress_extractor import extract_posts_from_csv
     from src.parsers.ricos_parser import convert_html_to_ricos, strip_html_nodes
@@ -22,7 +23,7 @@ Usage example::
     posts = extract_posts_from_csv("posts.csv")
     for post in posts:
         ricos = convert_html_to_ricos(post["ContentHTML"])
-        # upload cover image if present
+        # fazer upload da imagem de capa, se presente
         if post.get("FeaturedImageUrl"):
             post["FeaturedImageUrl"] = upload_image_from_url(cfg, post["FeaturedImageUrl"])
         post["CategoryIds"] = get_or_create_terms(cfg, "categories", post.get("Categories"))
@@ -123,48 +124,104 @@ def with_retries(fn: Callable[[], requests.Response], *, max_attempts: int = 5, 
 # Member helpers
 ###############################################################################
 
-def list_members(cfg: Dict[str, str]) -> List[Dict[str, Any]]:
+def get_member_by_email(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
     """
-    Lists all members for the Wix site.
+    Retrieves a member by their email address.
 
-    :param cfg: Wix configuration dictionary with an ``access_token``.
-    :return: A list of member objects.
+    :param cfg: Wix configuration dictionary with an ``access_token`` and ``base_url``.
+    :param email: The email address of the member to retrieve.
+    :return: The member object if found, or ``None`` if not found or on error.
     """
     _limiter.wait()
     def do_request() -> requests.Response:
         return requests.get(
-            f"{cfg['base_url']}/members/v1/members",
+            f"{cfg['base_url']}/members/v1/members?query={{'filter': {{'loginEmail': {{'$eq': '{email}'}}}}}}",
             headers=wix_headers(cfg),
         )
     try:
         resp = with_retries(do_request)
-        return resp.json().get("members", [])
+        members = resp.json().get("members", [])
+        if members:
+            return members[0]  # Assuming email is unique, return the first match
+        return None
     except requests.HTTPError as e:
-        print(f"Failed to list members: {e.response.text}")
-        return []
+        print(f"Failed to get member by email {email}: {e.response.text}")
+        return None
 
 def create_member(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
     """
-    Creates a new member on the Wix site.
+    Creates a new member on the Wix site. If the member already exists,
+    it retrieves and returns the existing member.
 
-    :param cfg: Wix configuration dictionary with an ``access_token``.
+    :param cfg: Wix configuration dictionary with an ``access_token`` and ``base_url``.
     :param email: The email address for the new member.
-    :return: The new member object, or ``None`` on failure.
+    :return: The new or existing member object, or ``None`` on unrecoverable failure.
     """
     _limiter.wait()
     def do_request() -> requests.Response:
         return requests.post(
             f"{cfg['base_url']}/members/v1/members",
             headers={**wix_headers(cfg), "Content-Type": "application/json"},
-            json={"member": {"loginEmail": email}},
+            json={"member": {"loginEmail": email, "contact": {"firstName": "Default", "lastName": "Author"}}},
         )
     try:
         resp = with_retries(do_request)
         return resp.json().get("member")
     except requests.HTTPError as e:
+        if e.response.status_code == 409:  # Conflict, often indicates ALREADY_EXISTS
+            error_data = e.response.json()
+            if "details" in error_data and any("ALREADY_EXISTS" in detail.get("message", "") for detail in error_data.get("details", [])):
+                print(f"Member with email {email} already exists. Retrieving existing member.")
+                return get_member_by_email(cfg, email)
         print(f"Failed to create member: {e.response.text}")
-        # Re-raise the exception so it can be handled upstream
-        raise
+        return None
+
+def get_or_create_author_id(cfg: Dict[str, str], author_email: str, default_author_email: str) -> Optional[str]:
+    """
+    Gets the member ID for a given author email. If the author does not exist,
+    attempts to create them. Handles ALREADY_EXISTS errors by retrieving the
+    existing member. If all attempts fail, falls back to a default author's ID.
+
+    :param cfg: Wix configuration dictionary.
+    :param author_email: The email of the author to find or create.
+    :param default_author_email: The email of the default author to use as a fallback.
+    :return: The member ID of the author, or the default author, or None if fallback fails.
+    """
+    # Try to find the author first
+    member = get_member_by_email(cfg, author_email)
+    if member:
+        print(f"Found existing author {author_email} with ID: {member.get('id')}")
+        return member.get("id")
+
+    # If not found, try to create
+    print(f"Author {author_email} not found. Attempting to create new member.")
+    try:
+        new_member = create_member(cfg, author_email)
+        if new_member:
+            print(f"Successfully created author {author_email} with ID: {new_member.get('id')}")
+            return new_member.get("id")
+    except Exception as e:
+        print(f"Error creating member {author_email}: {e}")
+
+    # Fallback to default author
+    print(f"Could not find or create author {author_email}. Falling back to default author {default_author_email}.")
+    default_member = get_member_by_email(cfg, default_author_email)
+    if default_member:
+        print(f"Using default author {default_author_email} with ID: {default_member.get('id')}")
+        return default_member.get("id")
+    else:
+        print(f"Default author {default_author_email} not found. Attempting to create default author.")
+        try:
+            created_default_member = create_member(cfg, default_author_email)
+            if created_default_member:
+                print(f"Successfully created default author {default_author_email} with ID: {created_default_member.get('id')}")
+                return created_default_member.get("id")
+            else:
+                print(f"Failed to create default author {default_author_email}. No author ID available.")
+                return None
+        except Exception as e:
+            print(f"Error creating default author {default_author_email}: {e}. No author ID available.")
+            return None
 
 
 ###############################################################################
@@ -229,6 +286,7 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
     if not labels:
         return ids
     base = f"{cfg['base_url']}/blog/v3/{kind}"
+    print(f"DEBUG: get_or_create_terms called for kind: {kind}, labels: {labels}")
     # Retrieve existing terms
     _limiter.wait()
     def list_terms() -> requests.Response:
@@ -237,7 +295,10 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
         resp = with_retries(list_terms)
         existing = resp.json().get(kind, [])
         term_map = { (t.get("label") or "").lower(): t.get("id") for t in existing }
-    except Exception:
+        print(f"DEBUG: Existing {kind}: {existing}")
+        print(f"DEBUG: {kind} term_map: {term_map}")
+    except Exception as e:
+        print(f"ERROR: Failed to list existing {kind}: {e}")
         term_map = {}
     for label in labels:
         low = label.lower()
@@ -246,8 +307,10 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
             # Add to ids list only if it's not already present to avoid duplicates
             if term_id not in ids:
                 ids.append(term_id)
+            print(f"DEBUG: Found existing {kind} '{label}' with ID: {term_id}")
         else:
             # Create a new term
+            print(f"DEBUG: Creating new {kind}: '{label}'")
             _limiter.wait()
             def create() -> requests.Response:
                 payload = {"label": label} if kind == "tags" else {"category": {"label": label}}
@@ -261,7 +324,11 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
                     if term_id not in ids:
                         ids.append(term_id)
                     term_map[low] = term_id
-            except Exception:
+                    print(f"DEBUG: Successfully created {kind} '{label}' with ID: {term_id}")
+                else:
+                    print(f"ERROR: Failed to get ID for newly created {kind} '{label}'. Response: {resp.json()}")
+            except Exception as e:
+                print(f"ERROR: Failed to create {kind} '{label}': {e}")
                 continue
     return ids
 

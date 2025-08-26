@@ -1,0 +1,636 @@
+{
+    "id": "0e4b70b8-e052-4260-9df2-c2516c6b9685",
+    "title": "O emissor gratuito de Notas Fiscais do SEBRAE vai cair?",
+    "excerpt": "Oi gente! Tudo bem com vocês? Hoje venho alertar vocês a respeito de algo muito importante! Quem conhece o Sebrae, entende a importância...",
+    "firstPublishedDate": "2025-08-21T00:13:06.834Z",
+    "lastPublishedDate": "2025-08-21T00:13:06.834Z",
+    "slug": "o-emissor-gratuito-de-notas-fiscais-do-sebrae-vai-cair",
+    "featured": false,
+    "pinned": false,
+    "categoryIds": [
+        "ab9bd249-b461-4141-8349-d31f2e0bc59a",
+        "29f70bf6-8183-413f-b918-1c661f3fe62c",
+        "8b70d814-f531-4620-b661-bf0e2667baf4"
+    ],
+    "coverMedia": {
+        "enabled": true,
+        "image": {
+            "id": "8ef77a_f1200f597ad049969c729c295fb39647~mv2.jpg",
+            "url": "https://static.wixstatic.com/media/8ef77a_f1200f597ad049969c729c295fb39647~mv2.jpg",
+            "height": 598,
+            "width": 1032,
+            "filename": "tela_7.jpg"
+        },
+        "displayed": true,
+        "custom": true
+    },
+    "memberId": "d5cd295d-1f46-432a-9acf-875ede0b0d17",
+    "hashtags": [],
+    "commentingEnabled": true,
+    "minutesToRead": 2,
+    "tagIds": [
+        "1b65d899-fdc0-4821-9500-e1dd8385322c",
+        "5f3e7505-01c2-44db-acdd-ba25b8cb8158",
+        "7f76dd50-d2d6-42c6-97b2-8cc91920c6d6",
+        "9471202e-323f-434f-a20f-e2840ac37eae",
+        "092f58c4-1f60-4dbd-940d-687689d8371d",
+        "c5fe9658-8f11-4f95-b937-f543d393310a",
+        "172c89f6-d022-442c-bed1-42c587dbc9fe",
+        "a3e98f6f-52da-42e1-9850-26ebad55ee30",
+        "c3b42994-c183-4a69-8086-a6a7f91b2b98",
+        "4fb912a7-a8d6-4ba6-8dba-99ad5a377ef3",
+        "35a5d08b-0e65-4d92-a6cd-348f91383467",
+        "a01d4676-a693-4a5f-8334-ced2d8bc88a0",
+        "e24e1db6-0816-4cd2-8d5e-ac0e407037ec",
+        "8d8351b8-dd22-44a8-a9bf-968cb9eb9e55",
+        "e431276c-32ef-42e3-980e-3b63cb9900d9",
+        "12888e76-c6f9-4704-9682-8bf1383c4a4a",
+        "984c426e-179d-40e3-92d2-8c8174442fc7"
+    ],
+    "relatedPostIds": [],
+    "pricingPlanIds": [],
+    "language": "pt",
+    "preview": false,
+    "contentId": "68a664928efa79f18afbab5f",
+    "mostRecentContributorId": "d5cd295d-1f46-432a-9acf-875ede0b0d17",
+    "media": {
+        "wixMedia": {
+            "image": {
+                "id": "8ef77a_f1200f597ad049969c729c295fb39647~mv2.jpg",
+                "url": "https://static.wixstatic.com/media/8ef77a_f1200f597ad049969c729c295fb39647~mv2.jpg",
+                "height": 598,
+                "width": 1032,
+                "filename": "tela_7.jpg"
+            }
+        },
+        "displayed": true,
+        "custom": true
+    },
+    "hasUnpublishedChanges": false,
+    "translations": [],
+    "customExcerpt": false,
+    "internalCategoryIds": [],
+    "internalRelatedPostIds": [],
+    "richContent": {
+        "nodes": [
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Oi gente! Tudo bem com vocês?",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Hoje venho alertar vocês a respeito de algo muito importante!",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Quem conhece o Sebrae, entende a importância da entidade para os empresários no Brasil",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ":",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": " treinamentos, materiais didáticos e até um ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "sistema para emissão de notas ",
+                            "decorations": [
+                                {
+                                    "type": "LINK",
+                                    "linkData": {}
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "que ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "é disponibilizado ao público, ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "tendo este",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": " oscilado com grande frequência junto com ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "ao ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "site principal.",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "IMAGE",
+                "id": "",
+                "nodes": [],
+                "imageData": {
+                    "containerData": {
+                        "width": {
+                            "size": "CONTENT"
+                        },
+                        "alignment": "CENTER"
+                    },
+                    "image": {
+                        "src": {
+                            "id": "8ef77a_63e593ddf07a4fe79ef25ceab29fd6bc~mv2.png"
+                        },
+                        "width": 550,
+                        "height": 275
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Para todos aqueles pequenos e micro empreendedores que utilizam, tanto o site quanto os outros recursos do Sebrae, fiquem sabendo que podem ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "enfrentar ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "alguma possibilidade de encontrar ele fora do ar nesse fim de outubro, mais precisamente no dia 30 de outubro. Alerta este, feito pelo próprio SEBRAE, onde informa que o ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "site estará em manutenção",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": " por estar projetando uma versão web da plataforma. Com isso",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ", ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "muitos empresários não conseguirão por exemplo utilizar o ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "emissor gratuito – Emissor de Nota Fiscal Eletrônica (NF-e) 4.01.",
+                            "decorations": [
+                                {
+                                    "type": "LINK",
+                                    "linkData": {}
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Por motivos adversos, esse tipo de imprevisto acontece de forma recorrente na plataforma. Em outras ocasiões um ataque cibernético causou a queda, informação confirmada pelo próprio SEBRAE, que na época do ocorrido foi o mais ágil possível para resolver o problema.\n\n",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Nas redes sociais, ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "usuários também apontaram outros sistemas que ficaram fora do ar por conta da queda",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ", incluindo uma plataforma de emissão de notas fiscais que é fornecida gratuitamente pela organização, como foi citado acima. O mesmo, também vale para os sites que disponibilizam vagas e cursos, com os usuários incapazes de realizarem inscrições ou submeterem candidaturas.",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Ainda sobre o sistema instalável do SEBRAE, ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "temos um tutorial que ensina a migrar para a nova plataforma web da instituição",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ". Segue imagens e um vídeo de como utilizar a nova plataforma:",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\n\nImagem 1\n",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "IMAGE",
+                "id": "",
+                "nodes": [],
+                "imageData": {
+                    "containerData": {
+                        "width": {
+                            "size": "CONTENT"
+                        },
+                        "alignment": "CENTER"
+                    },
+                    "image": {
+                        "src": {
+                            "id": "8ef77a_73faca49a59e471cb455ba95191739c0~mv2.jpg"
+                        },
+                        "width": 1024,
+                        "height": 593
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "imagem 2\n",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nimagem 3\n",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nimagem 4\n",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nimagem 5\n",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nimagem 6\n",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\n\n[youtube https://www.youtube.com/watch?v=wsHTKe4fzec]\n\n",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Enquanto o sistema seguem fora do ar sem previsão de retorno, resta aos usuários, apenas, procurarem outras soluções para emitir suas notas fiscais. Pensando nisso, eu convido você a conhecer nosso sistema parceiro, o ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "EasyGestor",
+                            "decorations": [
+                                {
+                                    "type": "LINK",
+                                    "linkData": {}
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ". Emissor 100% online e intuitivo, e o melhor, você tem um pacote ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "GRATUITO",
+                            "decorations": [
+                                {
+                                    "type": "LINK",
+                                    "linkData": {}
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": " disponível para cadastro! Exigindo apenas um ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Certificado digital modelo A1",
+                            "decorations": [
+                                {
+                                    "type": "LINK",
+                                    "linkData": {}
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ". Caso não possua, você pode ter informações de como adquirir o seu ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "diretamente conosco",
+                            "decorations": [
+                                {
+                                    "type": "LINK",
+                                    "linkData": {}
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ". Espero ajudar você com essa informação.",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\n\n[youtube https://www.youtube.com/watch?v=kyb9Ypiy3hg]\n\n",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Vamos crescer juntos?",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            }
+        ]
+    }
+}
