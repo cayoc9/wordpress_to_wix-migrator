@@ -1,0 +1,491 @@
+{
+    "id": "2604f781-55f1-4068-8138-f225891affd0",
+    "title": "Como Importar um PDF para o Excel e Fazer Cálculos: Tutorial Passo a Passo",
+    "excerpt": "Aprenda a importar dados de um arquivo PDF diretamente para o Excel de forma simples e eficiente, utilizando ferramentas do Microsoft Word. Tutorial completo com vídeo explicativo.",
+    "firstPublishedDate": "2025-08-21T00:52:13.562Z",
+    "lastPublishedDate": "2025-08-21T00:52:13.562Z",
+    "slug": "como-importar-um-pdf-para-o-excel-e-fazer-cálculos-tutorial-passo-a-passo",
+    "featured": false,
+    "pinned": false,
+    "categoryIds": [
+        "8b70d814-f531-4620-b661-bf0e2667baf4"
+    ],
+    "coverMedia": {
+        "enabled": true,
+        "image": {
+            "id": "8ef77a_2e70fa555c9b4598948c977432b94a47~mv2.png",
+            "url": "https://static.wixstatic.com/media/8ef77a_2e70fa555c9b4598948c977432b94a47~mv2.png",
+            "height": 720,
+            "width": 1280,
+            "filename": "Most-Attractive-Youtube-Thumbnail.png",
+            "altText": "Miniatura do vídeo tutorial sobre como importar PDF para Excel"
+        },
+        "displayed": true,
+        "custom": true
+    },
+    "memberId": "32a5c54a-18eb-4691-8a18-8856997a371e",
+    "hashtags": [],
+    "commentingEnabled": true,
+    "minutesToRead": 3,
+    "tagIds": [
+        "2a09aaa9-2952-464a-b9c1-1d1badd8b4ee",
+        "60db8143-ec36-4055-92e2-10d2fca392b7",
+        "9a9437b8-794b-40aa-9251-a9c1af198012",
+        "3e4767df-2b4b-43b7-8971-ed638dc5ac13",
+        "b079525d-bd11-40f6-a773-284e9f370fc4",
+        "612dc721-8078-48a2-9d6a-83d216ed1d21",
+        "c6f759b8-0b10-44ab-9ea5-8985314987f9",
+        "34e5b673-7d7a-4d79-bf4a-c56204eabb39",
+        "2970476b-5be9-4dbc-bc4e-6b02dd62ed67",
+        "314c0e84-ece0-41f4-a2d2-b4e09adaa710",
+        "43c31144-a630-49cc-b595-c42c875fbb0f",
+        "fdc895c9-3181-4eaa-ba1f-8df8d6695633",
+        "e02e5d76-31f4-4ea5-a312-e72e72dcf6ed",
+        "5ed0b7d6-6d6a-4282-9987-d1194f49d7c1",
+        "6237b1e5-6472-4ff4-a256-72c7ddd40b1f",
+        "686ffdc6-e955-41aa-985b-ed67bfdfe91f",
+        "93de2c46-60cd-4a99-b81e-48891c76a162",
+        "b6744e02-5cb5-4db1-a0cb-b659247616b3",
+        "b8dd4058-105d-48f2-8529-c58c0c0a046a",
+        "7396b452-e2f2-4281-b77e-612ac3b2ee8c",
+        "a73b3b50-9b12-4678-87af-3ef7cfc76df0",
+        "c53e5734-0a7d-4607-bff5-d76c28918b3f"
+    ],
+    "relatedPostIds": [],
+    "pricingPlanIds": [],
+    "language": "pt",
+    "preview": false,
+    "contentId": "68a66dbd8efa79f18afbc1b0",
+    "mostRecentContributorId": "32a5c54a-18eb-4691-8a18-8856997a371e",
+    "media": {
+        "wixMedia": {
+            "image": {
+                "id": "8ef77a_2e70fa555c9b4598948c977432b94a47~mv2.png",
+                "url": "https://static.wixstatic.com/media/8ef77a_2e70fa555c9b4598948c977432b94a47~mv2.png",
+                "height": 720,
+                "width": 1280,
+                "filename": "Most-Attractive-Youtube-Thumbnail.png",
+                "altText": "Miniatura do vídeo tutorial sobre como importar PDF para Excel"
+            }
+        },
+        "displayed": true,
+        "custom": true
+    },
+    "hasUnpublishedChanges": false,
+    "translations": [],
+    "customExcerpt": false,
+    "internalCategoryIds": [],
+    "internalRelatedPostIds": [],
+    "richContent": {
+        "nodes": [
+            {
+                "type": "PARAGRAPH",
+                "id": "p1",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "t1",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Você já precisou trabalhar com dados de um arquivo ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t2",
+                        "nodes": [],
+                        "textData": {
+                            "text": "PDF",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t3",
+                        "nodes": [],
+                        "textData": {
+                            "text": " e não sabia como importá-los para o ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t4",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Excel",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t5",
+                        "nodes": [],
+                        "textData": {
+                            "text": "? Seja para fazer cálculos ou organizar informações de forma mais eficiente, a boa notícia é que é possível importar dados de ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t6",
+                        "nodes": [],
+                        "textData": {
+                            "text": "PDF para o Excel",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t7",
+                        "nodes": [],
+                        "textData": {
+                            "text": " de maneira simples, utilizando apenas as ferramentas do ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t8",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Microsoft Word",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t9",
+                        "nodes": [],
+                        "textData": {
+                            "text": " e do próprio ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t10",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Excel",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t11",
+                        "nodes": [],
+                        "textData": {
+                            "text": ". Neste tutorial, vamos ensinar passo a passo como realizar essa tarefa e garantir que você possa trabalhar com os dados importados de forma prática e precisa.",
+                            "decorations": []
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "p2",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "t12",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Para te ajudar mais, separamos um vídeo especial com esse passo a passo completo! Assista:",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                },
+                                {
+                                    "type": "ITALIC"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "VIDEO",
+                "id": "v1",
+                "videoData": {
+                    "url": "https://www.youtube.com/watch?v=yvMfvBwbALI",
+                    "containerData": {
+                        "width": {
+                            "custom": "940px"
+                        },
+                        "alignment": "CENTER"
+                    }
+                }
+            },
+            {
+                "type": "HEADING",
+                "id": "h1",
+                "headingData": {
+                    "text": "Passo 1: Abra o Arquivo PDF no Adobe Reader",
+                    "level": 3
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "p3",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "t13",
+                        "nodes": [],
+                        "textData": {
+                            "text": "A primeira etapa é abrir o arquivo PDF que contém os dados que você deseja importar. Caso o PDF esteja em seu computador, basta clicar com o botão direito no arquivo e selecionar \"Abrir com\" e escolher o ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t14",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Adobe Reader",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t15",
+                        "nodes": [],
+                        "textData": {
+                            "text": ". O Adobe Reader é uma ferramenta leve e eficiente para visualizar arquivos PDF, e é importante usá-lo para garantir que você consiga acessar os dados de forma adequada.",
+                            "decorations": []
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "HEADING",
+                "id": "h2",
+                "headingData": {
+                    "text": "Passo 2: Converter o PDF para o Word",
+                    "level": 3
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "p4",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "t16",
+                        "nodes": [],
+                        "textData": {
+                            "text": "O segredo para transformar dados de ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t17",
+                        "nodes": [],
+                        "textData": {
+                            "text": "PDF em Excel",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t18",
+                        "nodes": [],
+                        "textData": {
+                            "text": " é utilizar o ",
+                            "decorations": []
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t19",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Microsoft Word",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "TEXT",
+                        "id": "t20",
+                        "nodes": [],
+                        "textData": {
+                            "text": ". Isso ocorre porque o Word possui uma funcionalidade que permite abrir arquivos PDF e convertê-los para um formato editável.",
+                            "decorations": []
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "NUMBERING",
+                "id": "n1",
+                "nodes": [
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "li1",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "p5",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "t21",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Abra o ",
+                                            "decorations": []
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "t22",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Microsoft Word",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "t23",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": ".",
+                                            "decorations": []
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "li2",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "p6",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "t24",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Clique em “",
+                                            "decorations": []
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "t25",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Abrir",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "t26",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "” e, em seguida, escolha o arquivo PDF que você deseja converter.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "li3",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "p7",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "t27",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "O Word fará a conversão automaticamente, e o conteúdo do PDF será exibido em formato de texto. Isso inclui tabelas, parágrafos e outros elementos presentes no PDF.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "p8",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "t28",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Vale lembrar que, durante a conversão, o layout do arquivo pode sofrer algumas alterações, mas o conteúdo principal será preservado.",
+                            "decorations": []
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "HEADING",
+                "id": "h3",
+                "headingData": {
+                    "text": "Passo 3: Copiar os Dados para o Excel",
+                    "level": 3
+                }
+            }
+        ]
+    }
+}

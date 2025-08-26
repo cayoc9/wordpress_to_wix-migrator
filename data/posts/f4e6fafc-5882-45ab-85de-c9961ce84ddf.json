@@ -1,0 +1,1601 @@
+{
+    "id": "f4e6fafc-5882-45ab-85de-c9961ce84ddf",
+    "title": "MEI: Regularize Suas Dívidas no Simples Nacional e Evite a Exclusão",
+    "excerpt": "Se você é Microempreendedor Individual (MEI), fique atento: o prazo para regularizar suas dívidas no Simples Nacional termina no dia 29...",
+    "firstPublishedDate": "2025-08-21T00:52:31.408Z",
+    "lastPublishedDate": "2025-08-21T00:52:31.408Z",
+    "slug": "mei-regularize-suas-dívidas-no-simples-nacional-e-evite-a-exclusão",
+    "featured": false,
+    "pinned": false,
+    "categoryIds": [
+        "9a511b56-e966-40d3-8004-9ba88f7fc5f7"
+    ],
+    "coverMedia": {
+        "enabled": true,
+        "image": {
+            "id": "8ef77a_e0b46ecf4df04cf295c25f37a6a89955~mv2.jpg",
+            "url": "https://static.wixstatic.com/media/8ef77a_e0b46ecf4df04cf295c25f37a6a89955~mv2.jpg",
+            "height": 1120,
+            "width": 1120,
+            "filename": "Leonardo_Phoenix_Create_a_highly_detailed_and_realistic_image_0.jpg"
+        },
+        "displayed": true,
+        "custom": true
+    },
+    "memberId": "32a5c54a-18eb-4691-8a18-8856997a371e",
+    "hashtags": [],
+    "commentingEnabled": true,
+    "minutesToRead": 3,
+    "tagIds": [
+        "02c2b22d-b883-4be2-b048-dc6162821feb",
+        "e5e736cb-1bb7-464e-af74-24927bb53878",
+        "1f0babe8-23e9-499f-aa33-444097083fc6",
+        "cb61b316-7613-4e68-af04-e167417c3779",
+        "4138edb8-1545-429b-bed7-22c6947a010c",
+        "c6eb3d78-236b-437c-9ab7-a888ce136b37",
+        "1c16de46-309e-4aaa-93ef-62fadd4b1eb3",
+        "c84b2c17-5b89-442c-95d8-44571d84ff6a",
+        "b71fad06-6b55-46c9-96ba-28be4854628c",
+        "602694e2-48df-45c6-b1c2-b78a9cc664f2",
+        "5a524a55-be67-48d7-9aa9-2bf5d668917d",
+        "c83c5591-6fa3-4359-b55a-91f622e58b89",
+        "5c3f569f-4930-4ac5-ba73-2e1e77c3204e",
+        "e6c7595d-d7a6-4deb-bc5d-85f31dfa7b88",
+        "6b902309-f6e3-4e67-9c16-e93881c18f74",
+        "53f992db-d456-4b01-945d-a37ed16c2a4f",
+        "05f47e9b-72bb-4be7-95d6-7069b7e4d155",
+        "05c0b9f3-13ba-4b42-9e8c-18cd22b95c74",
+        "a32810cf-071d-46d2-9cab-2bd99f52a03c",
+        "d3a3e479-84d8-4361-a068-310ee230af40"
+    ],
+    "relatedPostIds": [],
+    "pricingPlanIds": [],
+    "language": "pt",
+    "preview": false,
+    "contentId": "68aa080de0731e332665e688",
+    "mostRecentContributorId": "8ef77acd-64b1-45e0-819e-bc51664090c5",
+    "media": {
+        "wixMedia": {
+            "image": {
+                "id": "8ef77a_e0b46ecf4df04cf295c25f37a6a89955~mv2.jpg",
+                "url": "https://static.wixstatic.com/media/8ef77a_e0b46ecf4df04cf295c25f37a6a89955~mv2.jpg",
+                "height": 1120,
+                "width": 1120,
+                "filename": "Leonardo_Phoenix_Create_a_highly_detailed_and_realistic_image_0.jpg"
+            }
+        },
+        "displayed": true,
+        "custom": true
+    },
+    "hasUnpublishedChanges": true,
+    "translations": [],
+    "customExcerpt": false,
+    "internalCategoryIds": [],
+    "internalRelatedPostIds": [],
+    "richContent": {
+        "nodes": [
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Se você é Microempreendedor Individual (MEI), fique atento: o prazo para regularizar suas dívidas no Simples Nacional termina no dia ",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "29 de novembro de 2024, às 19h",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ". Não perder essa data é essencial para manter os benefícios fiscais e a competitividade que o regime oferece.\n\nNeste artigo, explicamos tudo o que você precisa saber sobre como regularizar dívidas do MEI, as condições especiais oferecidas pela Procuradoria-Geral da Fazenda Nacional (PGFN) e como evitar a exclusão do Simples Nacional.\n",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "HEADING",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Por que Regularizar Dívidas do MEI no Simples Nacional?",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "headingData": {
+                    "level": 4,
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nO Simples Nacional é um regime tributário simplificado que reduz a carga tributária e a burocracia para micro e pequenas empresas, incluindo os MEIs. No entanto, para continuar aproveitando esses benefícios, é necessário manter as obrigações fiscais em dia.\n",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "HEADING",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Riscos de Não Regularizar:",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "headingData": {
+                    "level": 4,
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "BULLETED_LIST",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Exclusão do Simples Nacional:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " A partir de ",
+                                            "decorations": []
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "1º de janeiro de 2025",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": ", MEIs com débitos pendentes poderão ser desenquadrados.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Aumento de Custos:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Empresas excluídas passam a pagar impostos em regimes mais complexos e onerosos.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Dificuldade em Obter Crédito:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Dívidas tributárias comprometem a análise de crédito e acesso a financiamentos.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Multas e Juros Acumulados:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Quanto maior o atraso, maior será o valor devido.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "HEADING",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Quais São os Benefícios de Regularizar Dívidas MEI?",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "headingData": {
+                    "level": 4,
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nPara quem é MEI, regularizar as dívidas significa manter vantagens exclusivas do Simples Nacional, como:\n",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "ORDERED_LIST",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Tributação Reduzida:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Alíquotas menores e adequadas ao faturamento do MEI.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Pagamento Unificado:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Uma única guia (DAS) para recolher todos os impostos.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Acesso Facilitado ao Mercado Formal:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Formalização e credibilidade no mercado.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Participação em Licitações:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Prioridade em contratos com o governo.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Segurança Jurídica:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Menor risco de autuações fiscais.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nAlém disso, a ",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "PGFN",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": " está oferecendo condições especiais que facilitam a renegociação de débitos, incluindo ",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "descontos, parcelamentos e prazos acessíveis",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ".\n",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "HEADING",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Como Regularizar Dívidas do MEI no Simples Nacional",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "headingData": {
+                    "level": 4,
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nA regularização das dívidas do MEI deve ser feita exclusivamente pelo ",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Portal Regularize",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ", de forma online. Veja o passo a passo:\n",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "ORDERED_LIST",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Acesse o Portal Regularize",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": ": ",
+                                            "decorations": []
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "https://www.regularize.pgfn.gov.br",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Consulte suas Pendências:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Confira os débitos vinculados ao seu CNPJ.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Escolha a Modalidade de Renegociação:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Avalie as opções de parcelamento e descontos.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Formalize o Acordo:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Conclua o processo antes do prazo final.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "HEADING",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Modalidades de Regularização Disponíveis",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "headingData": {
+                    "level": 4,
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "BULLETED_LIST",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Transação Baseada na Capacidade de Pagamento:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Condições personalizadas conforme a análise financeira.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Transação para Dívidas de Pequeno Valor:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Ideal para MEIs com débitos menores, oferecendo mais prazos e descontos.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "HEADING",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Benefícios das Condições Especiais",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "headingData": {
+                    "level": 4,
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "BULLETED_LIST",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Descontos de até 100%",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " sobre juros, multas e encargos.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Parcelamento em até 133 vezes.",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "LIST_ITEM",
+                        "id": "",
+                        "nodes": [
+                            {
+                                "type": "PARAGRAPH",
+                                "id": "",
+                                "nodes": [
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": "Flexibilidade nos Pagamentos:",
+                                            "decorations": [
+                                                {
+                                                    "type": "BOLD"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    {
+                                        "type": "TEXT",
+                                        "id": "",
+                                        "nodes": [],
+                                        "textData": {
+                                            "text": " Termos adaptados à sua realidade financeira.",
+                                            "decorations": []
+                                        }
+                                    }
+                                ],
+                                "style": {
+                                    "paddingBottom": "2px"
+                                },
+                                "paragraphData": {
+                                    "textStyle": {
+                                        "textAlignment": "JUSTIFY"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "type": "HEADING",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Impacto das Dívidas MEI no Simples Nacional",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "headingData": {
+                    "level": 4,
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nDados da Receita Federal mostram que ",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "1,1 milhão de MEIs",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": " estão inadimplentes, acumulando dívidas que somam bilhões de reais. Esses números mostram a importância de regularizar pendências e evitar o risco de exclusão do Simples Nacional.\n\nAo manter-se no regime, o MEI continua com acesso a benefícios essenciais para seu crescimento e competitividade. Já a exclusão pode prejudicar a continuidade do negócio, resultando em mais custos e menos oportunidades.\n",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "HEADING",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Não Perca o Prazo Final",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "headingData": {
+                    "level": 4,
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "\nSe você é MEI e está inadimplente, regularizar suas dívidas até o ",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "dia 29 de novembro de 2024",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": " é essencial para manter os benefícios do Simples Nacional. Utilize as condições especiais da PGFN e aproveite essa oportunidade para reorganizar sua vida financeira e garantir a continuidade do seu negócio.\n\nAcesse o ",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": "Portal Regularize",
+                            "decorations": [
+                                {
+                                    "type": "BOLD"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            },
+            {
+                "type": "PARAGRAPH",
+                "id": "",
+                "nodes": [
+                    {
+                        "type": "TEXT",
+                        "id": "",
+                        "nodes": [],
+                        "textData": {
+                            "text": ", consulte suas pendências e escolha a melhor modalidade de renegociação. Não deixe para a última hora!\n\n ",
+                            "decorations": []
+                        }
+                    }
+                ],
+                "style": {
+                    "paddingBottom": "2px"
+                },
+                "paragraphData": {
+                    "textStyle": {
+                        "textAlignment": "JUSTIFY"
+                    }
+                }
+            }
+        ]
+    }
+}

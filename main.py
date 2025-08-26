@@ -1,43 +1,51 @@
+"""
+Entry point for the WordPress to Wix migration tool.
+"""
+
+import glob
 import json
+import os
 from src.migration_tool import WordPressMigrationTool
 
-def main() -> None:
-    """Função principal para rodar a ferramenta de migração WordPress para Wix."""
-    tool = WordPressMigrationTool(config_file="config/migration_config.json")
-    tool.log_message("Iniciando a migração WordPress para Wix.")
+CONFIG_FILE = "config/migration_config.json"
 
-    # Pede as credenciais do Wix se não estiverem no arquivo de configuração
-    if not tool.config["wix"].get("site_id") or not tool.config["wix"].get("api_key"):
+def main():
+    """
+    Main function to run the WordPress to Wix migration tool.
+    """
+    tool = WordPressMigrationTool(config_file=CONFIG_FILE)
+    tool.log_message("Starting WordPress to Wix migration.")
+
+    # Dynamically find export files in the 'docs' directory
+    docs_path = "docs/"
+    csv_files = glob.glob(os.path.join(docs_path, "*.csv"))
+    xml_files = glob.glob(os.path.join(docs_path, "*.xml"))
+
+    if not csv_files and not xml_files:
         tool.log_message(
-            "Credenciais Wix não encontradas no arquivo de configuração.",
+            f"No WordPress export files (.csv or .xml) found in '{docs_path}' directory.",
             level="ERROR",
-        )
-        tool.config["wix"]["site_id"] = input("Por favor, insira seu Wix Site ID: ")
-        tool.config["wix"]["api_key"] = input("Por favor, insira sua Wix API Key: ")
-        with open("config/migration_config.json", "w") as f:
-            json.dump(tool.config, f, indent=2)
-        tool.log_message("Credenciais Wix salvas no arquivo de configuração.")
-
-    # Extrai os posts dos arquivos de exportação
-    posts_csv_path = "docs/Posts-Export-2025-July-25-1838.csv"
-    posts_xml_path = "docs/Posts-Export-2025-July-24-2047.xml"
-    posts = tool.extract_posts(csv_path=posts_csv_path, xml_path=posts_xml_path)
-
-    if not posts:
-        tool.log_message(
-            "Nenhum post encontrado nos arquivos de exportação.", level="ERROR"
         )
         return
 
-    tool.log_message(f"Encontrados {len(posts)} posts para migrar.")
+    # Extract posts from the first available CSV or XML file
+    csv_path = csv_files[0] if csv_files else None
+    xml_path = xml_files[0] if xml_files else None
+    posts = tool.extract_posts(csv_path=csv_path, xml_path=xml_path)
 
-    new_base_url = input(
-        "Por favor, insira a URL base do novo site Wix (ex: https://exemplo.com): "
-    ).strip()
+    if not posts:
+        tool.log_message("No posts found in the export files.", level="ERROR")
+        return
 
-    tool.migrate_posts(posts, new_base_url=new_base_url)
-    tool.log_message("Processo de migração finalizado.")
+    tool.log_message(f"Found {len(posts)} posts to migrate.")
+
+    # Run the full migration process
+    tool.migrate_posts(
+        posts,
+        new_base_url=tool.config["migration"]["wix_site_url"]
+    )
+
+    tool.log_message("Migration process finished.")
 
 if __name__ == "__main__":
     main()
-

@@ -20,17 +20,16 @@ import os
 from typing import Any, Dict, List, Optional
 
 from src.extractors.wordpress_extractor import extract_posts_from_csv, extract_posts_from_xml
-from src.parsers.ricos_parser import convert_html_to_ricos, strip_html_nodes
+from src.parsers.ricos_parser import convert_html_to_ricos
 from src.migrators.wix_migrator import (
-    upload_image_from_url,
+    import_image_from_url,
     get_or_create_terms,
     create_draft_post,
     publish_post,
+    get_or_create_author_id,
 )
 from src.utils.errors import report_error, report_ok, ERRORS
 from src.utils.redirects import generate_redirects_csv
-
-import json
 
 class WordPressMigrationTool:
     """
@@ -42,23 +41,40 @@ class WordPressMigrationTool:
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None, *, config_file: Optional[str] = None) -> None:
-        if config_file:
+        if config_file and os.path.exists(config_file):
             with open(config_file, "r", encoding="utf-8") as f:
                 config = json.load(f)
-        if config is None:
-            # Default configuration from environment variables
-            config = {
-                "wix": {
-                    "site_id": os.getenv("WIX_SITE_ID", ""),
-                    "api_key": os.getenv("WIX_API_KEY", ""),
-                    "base_url": "https://www.wixapis.com",
-                },
-                "migration": {
-                    "dry_run": False,
-                    "limit": None,
-                },
-            }
+        elif config is None:
+            # Default configuration
+            config = {}
+
+        # Ensure essential keys exist to prevent KeyErrors
+        config.setdefault("wix", {})
+        config["wix"].setdefault("app_id", os.getenv("WIX_APP_ID", ""))
+        config["wix"].setdefault("app_secret", os.getenv("WIX_APP_SECRET", ""))
+        config["wix"].setdefault("instance_id", os.getenv("WIX_INSTANCE_ID", ""))
+        config["wix"].setdefault("access_token", "")
+        config["wix"].setdefault("member_id", "")
+        config["wix"].setdefault("base_url", "https://www.wixapis.com")
+
+        config.setdefault("migration", {})
+        config["migration"].setdefault("dry_run", False)
+        config["migration"].setdefault("limit", None)
+        config["migration"].setdefault("wordpress_domain", "")
+        config["migration"].setdefault("wix_site_url", "")
+        
         self.config = config
+        self.member_map_file = "reports/member_map.json"
+        self.email_to_member_id_map: Dict[str, str] = {}
+        self.default_member_id: Optional[str] = None
+
+        # Load existing member map
+        if os.path.exists(self.member_map_file):
+            try:
+                with open(self.member_map_file, "r", encoding="utf-8") as f:
+                    self.email_to_member_id_map = json.load(f)
+            except json.JSONDecodeError:
+                self.log_message(f"Warning: Could not decode {self.member_map_file}. Starting with empty map.", level="WARNING")
 
     def log_message(self, message: str, level: str = "INFO") -> None:
         ts = json.dumps(os.times())  # simplified timestamp placeholder
@@ -99,27 +115,71 @@ class WordPressMigrationTool:
             constructing redirect targets.
         :return: ``None``
         """
+        import requests  # Import here to avoid circular imports if needed elsewhere
+
         dry_run: bool = self.config.get("migration", {}).get("dry_run", False)
         limit: Optional[int] = self.config.get("migration", {}).get("limit")
         migrated: List[Dict[str, str]] = []
         count = 0
+
+        # Populate the initial email to member ID map
+        # This is now loaded from self.member_map_file in __init__
+
         for post in posts:
             if limit is not None and count >= limit:
                 break
             count += 1
             slug = post.get("Slug") or ""
             self.log_message(f"Migrating post '{slug}'")
+
+            # Print HTML content for debugging
+            print(f"DEBUG: Post '{slug}' HTML content:")
+            print(post.get("ContentHTML", ""))
+            print("---")
+
+            author_email = post.get("Author Email")
+            member_id = None
+            default_author_email = "default-author@example.com" # Define a default email
+
+            if not dry_run:
+                # Use the new get_or_create_author_id function
+                member_id = get_or_create_author_id(
+                    self.config["wix"],
+                    author_email if author_email else default_author_email, # Use post author email or default
+                    default_author_email
+                )
+                if member_id:
+                    # Update the map for caching within this migration run
+                    if author_email:
+                        self.email_to_member_id_map[author_email] = member_id
+                    else:
+                        self.email_to_member_id_map[default_author_email] = member_id
+                    # Save the updated map to file
+                    os.makedirs(os.path.dirname(self.member_map_file), exist_ok=True)
+                    with open(self.member_map_file, "w", encoding="utf-8") as f:
+                        json.dump(self.email_to_member_id_map, f)
+                else:
+                    self.log_message(f"Could not find or create a member for post '{slug}'. Skipping post.", level="WARNING")
+                    report_error("MISSING_MEMBER_ID", post)
+                    continue
+            else: # dry_run is True
+                self.log_message(f"Dry-run: would determine member ID for {author_email if author_email else 'default author'}", level="INFO")
+                # In dry-run, we don't actually get a member_id from API, so we can set a placeholder
+                member_id = "dry-run-member-id"
+
             try:
                 # Upload cover image
                 if post.get("FeaturedImageUrl"):
                     if dry_run:
                         self.log_message(f"Dry-run: would upload cover {post['FeaturedImageUrl']}")
                     else:
-                        new_url = upload_image_from_url(self.config["wix"], post["FeaturedImageUrl"])
-                        if new_url:
-                            post["FeaturedImageUrl"] = new_url
+                        media_id = import_image_from_url(self.config["wix"], post["FeaturedImageUrl"])
+                        if media_id:
+                            post["FeaturedImageId"] = media_id
                         else:
                             report_error("MEDIA_UPLOAD", post)
+                            self.log_message(f"Failed to upload media for post '{slug}'", "ERROR")
+
                 # Taxonomies
                 post["CategoryIds"] = []
                 post["TagIds"] = []
@@ -132,33 +192,50 @@ class WordPressMigrationTool:
                     if dry_run:
                         self.log_message(f"Dry-run: would ensure tags {post['Tags']}")
                     else:
-                        post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", post["Tags"])
+                        # Limit tags to 30 as per Wix API validation
+                        post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", post["Tags"][:30])
+
+
+                
                 # HTML conversion
-                ricos = convert_html_to_ricos(post.get("ContentHTML", ""), embed_strategy="html_iframe")
+                print(f"DEBUG: Converting HTML to Ricos for post '{slug}'")
+                image_importer = lambda url: import_image_from_url(self.config["wix"], url)
+                ricos = convert_html_to_ricos(
+                    post.get("ContentHTML", ""), 
+                    embed_strategy="html_iframe",
+                    image_importer=image_importer if not dry_run else None,
+                    paragraph_spacing_px=2
+                )
+                print(f"DEBUG: Ricos content for post '{slug}':")
+                print(ricos)
+                print("---")
+                
                 # Create draft
                 if dry_run:
                     self.log_message(f"Dry-run: would create draft for {slug}")
                     draft_resp = {"post": {"id": f"dry-{slug}"}}
                 else:
                     try:
-                        draft_resp = create_draft_post(self.config["wix"], post, ricos)
+                        draft_resp = create_draft_post(
+                            self.config["wix"], 
+                            post, 
+                            ricos,
+                            member_id=member_id
+                        )
                     except Exception as e:
-                        # If the draft fails due to HTML embeds, strip and retry once
-                        if hasattr(e, "response") and e.response.status_code == 400:
-                            ricos_no_html = strip_html_nodes(json.loads(json.dumps(ricos)))
-                            try:
-                                draft_resp = create_draft_post(self.config["wix"], post, ricos_no_html, allow_html_iframe=False)
-                            except Exception as e2:
-                                report_error("WIX_DRAFT_400", post, e2)
-                                continue
-                        else:
-                            report_error("WIX_NETWORK", post, e)
-                            continue
-                draft_id = (draft_resp.get("post") or {}).get("id")
+                        error_details = e.response.text if hasattr(e, "response") else str(e)
+                        report_error("WIX_NETWORK", post, e)
+                        self.log_message(f"Network error creating draft for post '{slug}': {error_details}", "ERROR")
+                        continue
+                
+                draft_id = (draft_resp.get("draftPost") or {}).get("id")
                 if not draft_id:
                     report_error("WIX_DRAFT_400", post)
+                    self.log_message(f"Draft creation for post '{slug}' did not return an ID.", "ERROR")
                     continue
+                
                 report_ok("DRAFT_CREATED", post, {"draft_id": draft_id})
+                
                 # Publish
                 if dry_run:
                     new_url = f"{new_base_url.rstrip('/')}/post/{slug}"
@@ -167,15 +244,22 @@ class WordPressMigrationTool:
                         pub_resp = publish_post(self.config["wix"], draft_id)
                         new_url = (pub_resp.get("post") or {}).get("url") or f"{new_base_url.rstrip('/')}/post/{slug}"
                     except Exception as e:
+                        error_details = e.response.text if hasattr(e, "response") else str(e)
                         report_error("PUBLISH", post, e)
+                        self.log_message(f"Failed to publish post '{slug}': {error_details}", "ERROR")
                         continue
+                
                 migrated.append({"Slug": slug, "Permalink": post.get("Permalink"), "NewURL": new_url})
                 report_ok("PUBLISHED", post, {"url": new_url})
+
             except Exception as e:
+                error_details = e.response.text if hasattr(e, "response") else str(e)
                 report_error("WIX_NETWORK", post, e)
+                self.log_message(f"An unexpected error occurred while migrating post '{slug}': {error_details}", "ERROR")
+
         # Generate redirects
         try:
-            generate_redirects_csv(migrated, old_domain=self.config.get("old_domain", ""), new_base=new_base_url)
+            generate_redirects_csv(migrated, old_domain=self.config.get("migration", {}).get("wordpress_domain", ""), new_base=new_base_url)
             self.log_message(f"Redirect CSV generated with {len(migrated)} entries")
         except Exception as e:
             self.log_message(f"Failed to generate redirects: {e}", "ERROR")

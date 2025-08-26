@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Callable, Dict, Iterable, List, Optional, Any
 
 import requests
 
@@ -71,14 +71,11 @@ def wix_headers(cfg: Dict[str, str]) -> Dict[str, str]:
     """
     Construct the default headers required for Wix API requests.
 
-    :param cfg: A configuration dictionary with keys ``api_key`` and
-                ``site_id``.
-    :return: A dictionary of headers including Authorization and
-             wix-site-id.
+    :param cfg: A configuration dictionary with the ``access_token``.
+    :return: A dictionary of headers including Authorization.
     """
     return {
-        "Authorization": cfg["api_key"],
-        "wix-site-id": cfg["site_id"],
+        "Authorization": f"Bearer {cfg['access_token']}",
     }
 
 
@@ -120,6 +117,113 @@ def with_retries(fn: Callable[[], requests.Response], *, max_attempts: int = 5, 
             attempt += 1
 
 
+
+
+
+###############################################################################
+# Member helpers
+###############################################################################
+
+def get_member_by_email(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves a member by their email address.
+
+    :param cfg: Wix configuration dictionary with an ``access_token`` and ``base_url``.
+    :param email: The email address of the member to retrieve.
+    :return: The member object if found, or ``None`` if not found or on error.
+    """
+    _limiter.wait()
+    def do_request() -> requests.Response:
+        return requests.get(
+            f"{cfg['base_url']}/members/v1/members?query={{'filter': {{'loginEmail': {{'$eq': '{email}'}}}}}}",
+            headers=wix_headers(cfg),
+        )
+    try:
+        resp = with_retries(do_request)
+        members = resp.json().get("members", [])
+        if members:
+            return members[0]  # Assuming email is unique, return the first match
+        return None
+    except requests.HTTPError as e:
+        print(f"Failed to get member by email {email}: {e.response.text}")
+        return None
+
+def create_member(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
+    """
+    Creates a new member on the Wix site. If the member already exists,
+    it retrieves and returns the existing member.
+
+    :param cfg: Wix configuration dictionary with an ``access_token`` and ``base_url``.
+    :param email: The email address for the new member.
+    :return: The new or existing member object, or ``None`` on unrecoverable failure.
+    """
+    _limiter.wait()
+    def do_request() -> requests.Response:
+        return requests.post(
+            f"{cfg['base_url']}/members/v1/members",
+            headers={**wix_headers(cfg), "Content-Type": "application/json"},
+            json={"member": {"loginEmail": email, "contact": {"firstName": "Default", "lastName": "Author"}}},
+        )
+    try:
+        resp = with_retries(do_request)
+        return resp.json().get("member")
+    except requests.HTTPError as e:
+        if e.response.status_code == 409:  # Conflict, often indicates ALREADY_EXISTS
+            error_data = e.response.json()
+            if "details" in error_data and any("ALREADY_EXISTS" in detail.get("message", "") for detail in error_data.get("details", [])):
+                print(f"Member with email {email} already exists. Retrieving existing member.")
+                return get_member_by_email(cfg, email)
+        print(f"Failed to create member: {e.response.text}")
+        return None
+
+def get_or_create_author_id(cfg: Dict[str, str], author_email: str, default_author_email: str) -> Optional[str]:
+    """
+    Gets the member ID for a given author email. If the author does not exist,
+    attempts to create them. Handles ALREADY_EXISTS errors by retrieving the
+    existing member. If all attempts fail, falls back to a default author's ID.
+
+    :param cfg: Wix configuration dictionary.
+    :param author_email: The email of the author to find or create.
+    :param default_author_email: The email of the default author to use as a fallback.
+    :return: The member ID of the author, or the default author, or None if fallback fails.
+    """
+    # Try to find the author first
+    member = get_member_by_email(cfg, author_email)
+    if member:
+        print(f"Found existing author {author_email} with ID: {member.get('id')}")
+        return member.get("id")
+
+    # If not found, try to create
+    print(f"Author {author_email} not found. Attempting to create new member.")
+    try:
+        new_member = create_member(cfg, author_email)
+        if new_member:
+            print(f"Successfully created author {author_email} with ID: {new_member.get('id')}")
+            return new_member.get("id")
+    except Exception as e:
+        print(f"Error creating member {author_email}: {e}")
+
+    # Fallback to default author
+    print(f"Could not find or create author {author_email}. Falling back to default author {default_author_email}.")
+    default_member = get_member_by_email(cfg, default_author_email)
+    if default_member:
+        print(f"Using default author {default_author_email} with ID: {default_member.get('id')}")
+        return default_member.get("id")
+    else:
+        print(f"Default author {default_author_email} not found. Attempting to create default author.")
+        try:
+            created_default_member = create_member(cfg, default_author_email)
+            if created_default_member:
+                print(f"Successfully created default author {default_author_email} with ID: {created_default_member.get('id')}")
+                return created_default_member.get("id")
+            else:
+                print(f"Failed to create default author {default_author_email}. No author ID available.")
+                return None
+        except Exception as e:
+            print(f"Error creating default author {default_author_email}: {e}. No author ID available.")
+            return None
+
+
 ###############################################################################
 # Media upload helpers
 ###############################################################################
@@ -127,92 +231,38 @@ def with_retries(fn: Callable[[], requests.Response], *, max_attempts: int = 5, 
 _limiter = RateLimiter(180)  # Use a conservative default
 
 
-def create_upload_url(cfg: Dict[str, str], filename: str, mime_type: str) -> Dict[str, str]:
+
+
+
+def import_image_from_url(cfg: Dict[str, str], image_url: str) -> Optional[str]:
     """
-    Request a signed upload URL from Wix.  The signed URL is valid for
-    one use and is used to PUT the file contents directly to Wix storage.
+    Imports an image from a remote URL into the Wix Media Manager.
 
-    :param cfg: Wix configuration dictionary.
-    :param filename: Name of the file to be uploaded.
-    :param mime_type: MIME type of the file (e.g., 'image/jpeg').
-    :return: A dictionary containing keys ``uploadUrl`` and ``uploadToken``.
-    """
-    _limiter.wait()
-    def do_request() -> requests.Response:
-        return requests.post(
-            f"{cfg['base_url']}/media/v1/files/upload/url",
-            headers={**wix_headers(cfg), "Content-Type": "application/json"},
-            json={"fileName": filename, "mimeType": mime_type},
-        )
-    resp = with_retries(do_request)
-    return resp.json()
-
-
-def upload_bytes_to_signed_url(url: str, data: bytes, mime_type: str) -> None:
-    """
-    Upload binary data to a Wix-signed URL.  This step does not use the
-    Wix API; instead, it performs a direct PUT against the provided
-    pre-signed URL.
-
-    :param url: The signed upload URL returned by :func:`create_upload_url`.
-    :param data: The raw bytes of the file to upload.
-    :param mime_type: The MIME type to use in the Content-Type header.
-    :raises requests.HTTPError: if the PUT fails.
-    """
-    # No rate limiting needed for the PUT request – it goes directly to Wix
-    resp = requests.put(url, data=data, headers={"Content-Type": mime_type})
-    resp.raise_for_status()
-
-
-def finalize_upload(cfg: Dict[str, str], upload_token: str) -> Dict[str, str]:
-    """
-    Notify Wix that the upload has completed, returning metadata about the
-    uploaded file.
-
-    :param cfg: Wix configuration dictionary.
-    :param upload_token: The token returned by :func:`create_upload_url`.
-    :return: A JSON object describing the uploaded file, including its URL.
-    """
-    _limiter.wait()
-    def do_request() -> requests.Response:
-        return requests.post(
-            f"{cfg['base_url']}/media/v1/files/upload/complete",
-            headers={**wix_headers(cfg), "Content-Type": "application/json"},
-            json={"uploadToken": upload_token},
-        )
-    resp = with_retries(do_request)
-    return resp.json()
-
-
-def upload_image_from_url(cfg: Dict[str, str], image_url: str) -> Optional[str]:
-    """
-    Download an image from a remote URL and upload it to Wix Media Manager.
-
-    This helper performs all three steps (generate upload URL, PUT data,
-    finalize upload).  On success it returns the Wix-hosted URL of the
-    uploaded image.  Failures are logged and ``None`` is returned.
+    This function uses the Import File endpoint, which is the recommended way
+    to add external media to Wix.
 
     :param cfg: Wix configuration dictionary.
     :param image_url: The source URL of the image.
-    :return: The Wix URL of the uploaded file, or ``None`` on error.
+    :return: The Wix media ID of the imported file, or ``None`` on error.
     """
     if not image_url:
         return None
+    
+    _limiter.wait()
+    
+    def do_request() -> requests.Response:
+        return requests.post(
+            f"{cfg['base_url']}/site-media/v1/files/import",
+            headers={**wix_headers(cfg), "Content-Type": "application/json"},
+            json={"url": image_url, "mediaType": "IMAGE"},
+        )
+    
     try:
-        # Download the image data
-        r = requests.get(image_url, stream=True, timeout=30)
-        r.raise_for_status()
-        data = r.content
-        # Determine a filename and MIME type; fallback to .jpg if unknown
-        filename = image_url.split("/")[-1].split("?")[0] or "image.jpg"
-        mime_type = r.headers.get("Content-Type", "image/jpeg")
-        upload_info = create_upload_url(cfg, filename, mime_type)
-        upload_bytes_to_signed_url(upload_info["uploadUrl"], data, mime_type)
-        completed = finalize_upload(cfg, upload_info["uploadToken"])
-        # Prefer the URL in the completed payload, falling back to the ID
-        file_obj = completed.get("file", {})
-        return file_obj.get("url") or file_obj.get("id")
-    except Exception:
+        resp = with_retries(do_request)
+        file_obj = resp.json().get("file", {})
+        return file_obj.get("id")
+    except Exception as e:
+        print(f"Failed to import image from {image_url}: {e}")
         return None
 
 
@@ -227,15 +277,16 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
     then creates any missing terms.
 
     :param cfg: Wix configuration dictionary.
-    :param kind: Either ``"tags"`` or ``"categories"``.
+    :param kind: Either "tags" or "categories".
     :param labels: An iterable of term names (strings).
-    :return: A list of term IDs corresponding to the supplied labels.
+    :return: A list of term IDs corresponding to the supplied labels, without duplicates.
     """
     ids: List[str] = []
     labels = [label.strip() for label in labels if label and label.strip()]
     if not labels:
         return ids
     base = f"{cfg['base_url']}/blog/v3/{kind}"
+    print(f"DEBUG: get_or_create_terms called for kind: {kind}, labels: {labels}")
     # Retrieve existing terms
     _limiter.wait()
     def list_terms() -> requests.Response:
@@ -244,14 +295,22 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
         resp = with_retries(list_terms)
         existing = resp.json().get(kind, [])
         term_map = { (t.get("label") or "").lower(): t.get("id") for t in existing }
-    except Exception:
+        print(f"DEBUG: Existing {kind}: {existing}")
+        print(f"DEBUG: {kind} term_map: {term_map}")
+    except Exception as e:
+        print(f"ERROR: Failed to list existing {kind}: {e}")
         term_map = {}
     for label in labels:
         low = label.lower()
         if low in term_map:
-            ids.append(term_map[low])
+            term_id = term_map[low]
+            # Add to ids list only if it's not already present to avoid duplicates
+            if term_id not in ids:
+                ids.append(term_id)
+            print(f"DEBUG: Found existing {kind} '{label}' with ID: {term_id}")
         else:
             # Create a new term
+            print(f"DEBUG: Creating new {kind}: '{label}'")
             _limiter.wait()
             def create() -> requests.Response:
                 payload = {"label": label} if kind == "tags" else {"category": {"label": label}}
@@ -261,9 +320,15 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
                 obj = resp.json().get("tag" if kind == "tags" else "category", {})
                 term_id = obj.get("id")
                 if term_id:
-                    ids.append(term_id)
+                    # Add to ids list only if it's not already present to avoid duplicates
+                    if term_id not in ids:
+                        ids.append(term_id)
                     term_map[low] = term_id
-            except Exception:
+                    print(f"DEBUG: Successfully created {kind} '{label}' with ID: {term_id}")
+                else:
+                    print(f"ERROR: Failed to get ID for newly created {kind} '{label}'. Response: {resp.json()}")
+            except Exception as e:
+                print(f"ERROR: Failed to create {kind} '{label}': {e}")
                 continue
     return ids
 
@@ -272,7 +337,7 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
 # Draft and publish helpers
 ###############################################################################
 
-def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str, Any], *, allow_html_iframe: bool = True) -> Dict[str, Any]:
+def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str, Any], member_id: str, *, allow_html_iframe: bool = True) -> Dict[str, Any]:
     """
     Create a draft blog post in Wix using the provided rich content.
 
@@ -284,6 +349,7 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
     :param post: Normalized post dictionary.
     :param ricos: Rich content object returned by
                   :func:`src.parsers.ricos_parser.convert_html_to_ricos`.
+    :param member_id: The ID of the member to be set as the author.
     :param allow_html_iframe: Whether to allow ``type: "html"`` nodes in
                               the payload.  If the Wix API rejects
                               HTML nodes, call this function again
@@ -292,17 +358,17 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
     :return: The response payload from Wix describing the newly created draft.
     :raises requests.HTTPError: on failure.
     """
-    api_url = f"{cfg['base_url']}/blog/v3/drafts/posts"
+    api_url = f"{cfg['base_url']}/blog/v3/draft-posts"
     # Assemble the draft post payload
     body: Dict[str, Any] = {
-        "post": {
+        "draftPost": {
             "title": post.get("Title") or "",
+            "memberId": member_id,
             "richContent": ricos,
             "excerpt": (post.get("Excerpt") or "")[:3000],
-            "coverMedia": None,
             "categoryIds": post.get("CategoryIds", []),
             "tagIds": post.get("TagIds", []),
-            "seoSlug": post.get("Slug") or "",
+            "slug": post.get("Slug") or "",
             "seoData": {
                 "title": post.get("MetaTitle") or post.get("Title") or "",
                 "description": (post.get("MetaDescription") or post.get("Excerpt") or "")[:156],
@@ -310,8 +376,14 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
         }
     }
     # Cover image
-    if post.get("FeaturedImageUrl"):
-        body["post"]["coverMedia"] = {"image": {"src": post["FeaturedImageUrl"]}}
+    if post.get("FeaturedImageId"):
+        body["draftPost"]["media"] = {
+            "wixMedia": {
+                "image": {"id": post["FeaturedImageId"]}
+            },
+            "displayed": True,
+            "custom": True
+        }
 
     _limiter.wait()
     def do_request() -> requests.Response:
@@ -324,8 +396,7 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
         resp = with_retries(do_request)
         return resp.json()
     except requests.HTTPError as e:
-        # If we allowed HTML and the Wix API rejects the request (400) we
-        # rethrow and let the caller decide whether to strip HTML and retry.
+        # Re-raise the exception so it can be handled upstream
         raise
 
 
@@ -338,7 +409,7 @@ def publish_post(cfg: Dict[str, str], draft_id: str) -> Dict[str, Any]:
     :return: The response payload from Wix describing the published post.
     :raises requests.HTTPError: on failure.
     """
-    api_url = f"{cfg['base_url']}/blog/v3/drafts/posts/{draft_id}/publish"
+    api_url = f"{cfg['base_url']}/blog/v3/draft-posts/{draft_id}/publish"
     _limiter.wait()
     def do_request() -> requests.Response:
         return requests.post(api_url, headers=wix_headers(cfg))
