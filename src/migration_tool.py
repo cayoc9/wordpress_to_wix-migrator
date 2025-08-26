@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from src.extractors.wordpress_extractor import extract_posts_from_csv, extract_posts_from_xml
 from src.parsers.ricos_parser import convert_html_to_ricos
@@ -30,8 +30,6 @@ from src.migrators.wix_migrator import (
 )
 from src.utils.errors import report_error, report_ok, ERRORS
 from src.utils.redirects import generate_redirects_csv
-
-import json
 
 class WordPressMigrationTool:
     """
