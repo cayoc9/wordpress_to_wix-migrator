@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def _slugify(value: str) -> str:
@@ -90,6 +90,12 @@ class WixPost(BaseModel):
                 seen.add(item)
                 deduped.append(item)
         return deduped
+
+    @model_validator(mode="after")
+    def _post_init(self) -> "WixPost":
+        if not self.slug and isinstance(self.title, str):
+            self.slug = _slugify(self.title)
+        return self
 
     def to_wix_draft_payload(self, publish: Optional[bool] = None) -> dict[str, Any]:
         body: dict[str, Any] = {
