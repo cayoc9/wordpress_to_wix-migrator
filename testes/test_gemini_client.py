@@ -54,6 +54,13 @@ sys.modules["google.genai.types"] = google_genai_types_module
 from services.agente_ia.gemini_client import GeminiClient
 
 
+def test_init_without_api_key(monkeypatch):
+    """Deve falhar se a chave da API não estiver configurada."""
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with pytest.raises(ValueError):
+        GeminiClient()
+
+
 def test_generate_builds_contents_and_returns_text():
     client = GeminiClient(api_key="test-key")
     data = b"binary-data"
