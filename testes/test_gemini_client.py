@@ -1,23 +1,15 @@
-"""Script para testar o cliente Gemini."""
-
 import os
-import sys
-from pathlib import Path
 
 import pytest
 
-# Ajusta path para importar o cliente real
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services" / "agente_ia"))
+pytest.importorskip("google.genai")
 
-try:  # pragma: no cover - depende de pacote externo
-    from gemini_client import GeminiClient  # type: ignore
-except Exception:  # pragma: no cover - ausência de dependências
-    GeminiClient = None
+from services.agente_ia.gemini_client import GeminiClient
 
 
-@pytest.mark.skipif(GeminiClient is None, reason="GeminiClient não disponível")
-def test_gemini_client_instantiation(monkeypatch):
-    """Garante que o cliente é instanciado quando dependências existem."""
-    monkeypatch.setenv("GOOGLE_API_KEY", "dummy")
-    client = GeminiClient()
-    assert client.model
+def test_init_without_api_key(monkeypatch):
+    """Deve falhar se a chave da API não estiver configurada."""
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with pytest.raises(ValueError):
+        GeminiClient()
+
