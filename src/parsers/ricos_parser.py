@@ -10,107 +10,63 @@ documentation.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional
-from bs4 import BeautifulSoup
+from typing import Any, Callable, Dict, List, Optional
+
+from bs4 import BeautifulSoup, Tag
+
+from .handlers.blockquote_handler import handle_blockquote
+from .handlers.code_block_handler import handle_code_block
+from .handlers.heading_handler import handle_heading
+from .handlers.iframe_handler import handle_iframe
+from .handlers.image_handler import handle_image
+from .handlers.list_handler import handle_list
+from .handlers.paragraph_handler import handle_paragraph
+from .handlers.utils import extract_youtube_id, iframe_html_for_video, link_block_for_video
 
 __all__ = [
     "convert_html_to_ricos",
     "strip_html_nodes",
 ]
 
-# Patterns used to extract YouTube video identifiers.  This list covers the
-# typical URL formats encountered in WordPress exports: watch URLs,
-# embed URLs and short youtu.be links.
-YOUTUBE_PATTERNS = [
-    r"(?:https?://)?(?:www\.)?youtube\.com/watch\?v=([A-Za-z0-9_-]{11})",
-    r"(?:https?://)?(?:www\.)?youtube\.com/embed/([A-Za-z0-9_-]{11})",
-    r"(?:https?://)?youtu\.be/([A-Za-z0-9_-]{11})",
-]
-YOUTUBE_RX = re.compile("|".join(YOUTUBE_PATTERNS))
+TAG_HANDLERS: Dict[str, Callable[..., Optional[Dict[str, Any]]]] = {
+    "h1": handle_heading,
+    "h2": handle_heading,
+    "h3": handle_heading,
+    "h4": handle_heading,
+    "h5": handle_heading,
+    "h6": handle_heading,
+    "p": handle_paragraph,
+    "ul": handle_list,
+    "ol": handle_list,
+    "blockquote": handle_blockquote,
+    "pre": handle_code_block,
+    "img": handle_image,
+    "iframe": handle_iframe,
+}
 
-def extract_youtube_id(url: str) -> Optional[str]:
-    """
-    Attempt to extract a YouTube video ID from a given URL.
 
-    :param url: The URL to parse.
-    :return: The video ID if present, otherwise ``None``.
-    """
-    if not url:
-        return None
-    m = YOUTUBE_RX.search(url)
-    if not m:
-        return None
-    for group in m.groups():
-        if group:
-            return group
-    return None
+def _convert_html_element_to_ricos_nodes(
+    element: Tag, embed_strategy: str
+) -> List[Dict[str, Any]]:
+    """Converts a single HTML element to a list of Ricos nodes."""
+    name = element.name.lower()
+    handler = TAG_HANDLERS.get(name)
+    if not handler:
+        return []
 
-def iframe_html_for_video(video_id: str) -> str:
-    """
-    Create an HTML iframe embed snippet for a given YouTube video ID.
+    if name == "iframe":
+        node = handler(element, embed_strategy=embed_strategy)
+    else:
+        node = handler(element)
 
-    :param video_id: The 11-character YouTube video ID.
-    :return: The HTML string for embedding the video.
-    """
-    src = f"https://www.youtube.com/embed/{video_id}"
-    return (
-        f'<iframe width="560" height="315" src="{src}" '
-        'title="YouTube video player" frameborder="0" '
-        'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" '
-        'allowfullscreen></iframe>'
-    )
+    return [node] if node else []
 
-def link_block_for_video(video_id: str) -> Dict[str, Any]:
-    """
-    Create a Ricos node representing a link to a YouTube video.  This is
-    used as a fallback when the Wix API does not support raw HTML
-    embeds.
 
-    :param video_id: The 11-character YouTube video ID.
-    :return: A dictionary representing a paragraph node with a play symbol
-             and a clickable link.
-    """
-    url = f"https://www.youtube.com/watch?v={video_id}"
-    thumb = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
-    return {
-        "type": "paragraph",
-        "nodes": [
-            {"type": "text", "text": "▶ ", "marks": []},
-            {
-                "type": "link",
-                "nodes": [
-                    {"type": "text", "text": "Assistir no YouTube", "marks": []}
-                ],
-                "data": {"url": url},
-            },
-        ],
-        "data": {"thumbnail": thumb},
-    }
-
-def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe") -> Dict[str, Any]:
+def convert_html_to_ricos(
+    html: str, *, embed_strategy: str = "html_iframe"
+) -> Dict[str, Any]:
     """
     Convert raw HTML into a Ricos (Wix Rich Content) structure.
-
-    Supported HTML elements include headings (h1–h6), paragraphs, lists,
-    blockquotes, code blocks, images and YouTube iframes.  Images are
-    represented with their original ``src`` and ``alt`` attributes – it is
-    the responsibility of the caller to replace those URLs once they
-    have been uploaded to Wix.
-
-    The ``embed_strategy`` parameter dictates how YouTube iframes are
-    handled:
-
-    * ``"html_iframe"`` (default): produce a node of type ``html`` containing
-      the raw iframe markup.  If the Wix API rejects the request (HTTP
-      400), callers should catch the exception, remove HTML nodes using
-      :func:`strip_html_nodes`, and retry with a fallback strategy.
-    * Any other value: represent the video as a simple link with a
-      play indicator; this requires no special support on the Wix side.
-
-    :param html: The input HTML string.
-    :param embed_strategy: Strategy for handling video embeds.
-    :return: A dictionary with a single key ``nodes`` holding a list of
-             Ricos nodes.
     """
     if not html:
         return {"nodes": []}
@@ -118,106 +74,27 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe") -> 
     soup = BeautifulSoup(html or "", "html.parser")
     nodes: List[Dict[str, Any]] = []
 
-    def add_text_para(text: str) -> None:
-        text = (text or "").strip()
-        if text:
-            nodes.append({
-                "type": "paragraph",
-                "nodes": [{"type": "text", "text": text, "marks": []}],
-            })
-
     for el in soup.recursiveChildGenerator():
-        if not getattr(el, "name", None):
+        if not isinstance(el, Tag):
             continue
-        name = el.name.lower()
-
-        if name in [f"h{i}" for i in range(1, 7)]:
-            level = int(name[-1])
-            text = el.get_text(strip=True)
-            if text:
-                nodes.append({
-                    "type": "heading",
-                    "data": {"level": level},
-                    "nodes": [{"type": "text", "text": text, "marks": []}],
-                })
-        elif name == "p":
-            txt = el.get_text(" ", strip=True)
-            if txt:
-                add_text_para(txt)
-        elif name in ("ul", "ol"):
-            items: List[Dict[str, Any]] = []
-            for li in el.find_all("li", recursive=False):
-                items.append({
-                    "type": "list-item",
-                    "nodes": [
-                        {
-                            "type": "text",
-                            "text": li.get_text(" ", strip=True),
-                            "marks": [],
-                        }
-                    ],
-                })
-            nodes.append({
-                "type": "bulleted-list" if name == "ul" else "numbered-list",
-                "nodes": items,
-            })
-        elif name == "blockquote":
-            txt = el.get_text(" ", strip=True)
-            if txt:
-                nodes.append({
-                    "type": "blockquote",
-                    "nodes": [{"type": "text", "text": txt, "marks": []}],
-                })
-        elif name == "pre":
-            code = el.get_text("\n", strip=False)
-            nodes.append({
-                "type": "code-block",
-                "nodes": [{"type": "text", "text": code, "marks": []}],
-            })
-        elif name == "img":
-            src = el.get("src")
-            alt = el.get("alt") or ""
-            if src:
-                nodes.append({
-                    "type": "image",
-                    "data": {"src": src, "alt": alt},
-                    "nodes": [],
-                })
-        elif name == "iframe":
-            src = el.get("src")
-            vid = extract_youtube_id(src or "")
-            if vid and embed_strategy == "html_iframe":
-                nodes.append({"type": "html", "data": {"html": iframe_html_for_video(vid)}})
-            elif vid:
-                nodes.append(link_block_for_video(vid))
-            else:
-                if src:
-                    nodes.append({
-                        "type": "paragraph",
-                        "nodes": [
-                            {
-                                "type": "link",
-                                "data": {"url": src},
-                                "nodes": [
-                                    {"type": "text", "text": src, "marks": []}
-                                ],
-                            }
-                        ],
-                    })
+        nodes.extend(_convert_html_element_to_ricos_nodes(el, embed_strategy))
 
     if not nodes:
-        add_text_para(soup.get_text(" ", strip=True))
+        text = (soup.get_text(" ", strip=True) or "").strip()
+        if text:
+            nodes.append(
+                {
+                    "type": "paragraph",
+                    "nodes": [{"type": "text", "text": text, "marks": []}],
+                }
+            )
+
     return {"nodes": nodes}
+
 
 def strip_html_nodes(ricos: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Remove HTML embed nodes from a Ricos structure.  Each HTML node is
-    replaced by a paragraph containing a link to the original embedded
-    resource.  Any node without a ``data.html`` attribute is dropped.
-
-    :param ricos: The rich content structure returned by
-                  :func:`convert_html_to_ricos`.
-    :return: A modified rich content structure with HTML nodes removed.
+    Remove HTML embed nodes from a Ricos structure.
     """
     new_nodes: List[Dict[str, Any]] = []
     for node in ricos.get("nodes", []):
@@ -226,18 +103,20 @@ def strip_html_nodes(ricos: Dict[str, Any]) -> Dict[str, Any]:
             m = re.search(r'src="([^\\"]+)"', html)
             url = m.group(1) if m else None
             if url:
-                new_nodes.append({
-                    "type": "paragraph",
-                    "nodes": [
-                        {
-                            "type": "link",
-                            "data": {"url": url},
-                            "nodes": [
-                                {"type": "text", "text": url, "marks": []}
-                            ],
-                        }
-                    ],
-                })
+                new_nodes.append(
+                    {
+                        "type": "paragraph",
+                        "nodes": [
+                            {
+                                "type": "link",
+                                "data": {"url": url},
+                                "nodes": [
+                                    {"type": "text", "text": url, "marks": []}
+                                ],
+                            }
+                        ],
+                    }
+                )
         else:
             new_nodes.append(node)
     ricos["nodes"] = new_nodes
