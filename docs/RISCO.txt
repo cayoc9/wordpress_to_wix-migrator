@@ -1,0 +1,1683 @@
+Go Headless
+Changelog
+Log In
+Ricos
+Getting Started
+Introduction
+API Reference
+Ricos Document
+In This Article
+Playground
+Navigation shortcuts
+Key concepts
+Root-level type
+Nodes
+Decorations
+Common Types
+Metadata
+Document Styles
+Ricos Document
+Developer Preview
+This API is subject to change. Bug fixes and new features will be released based on developer feedback throughout the preview period.
+
+A Ricos document object defines rich content.
+
+The object structure of a Ricos document is a tree of nodes that represent blocks of content. Some nodes are basic, such as paragraphs, and some nodes are complex, such as tables.
+
+A Ricos document has a similar structure to HTML, in which node types resemble tags, fields resemble attributes, and nodes resemble the children of HTML tags. The main difference is that a Ricos document has more constraints, which makes it easier to manipulate it and display the content in different environments.
+
+Important:
+When creating a Ricos Document to use with a Wix API, make sure to check which plugins the API enables.
+
+Playground
+While using this reference, you can build, view, or edit your rich content using the Ricos playground. You can build your content in the Editor tab, view it in the Viewer tab, and edit or copy and paste it from the Document tab.
+
+Navigation shortcuts
+Text: Paragraph, Heading, Blockquote, CodeBlock, Text.
+Lists: BulletedList, OrderedList, CollapsibleList, Table.
+Media: Image, Video, Gallery, Gif, Audio, File.
+Embeds: AppEmbed, Embed, LinkPreview, Html.
+Other nodes: Divider, Button.
+Decorations: Bold, Italic, Underline, Spoiler, Anchor, Mention, Link, Color, FontSize.
+Key concepts
+Here are some key concepts that you may need to build your Ricos document.
+
+Node IDs
+Every node in a Ricos object must have a unique ID. A node ID must start with a letter and can contain only letters, numbers, hyphens, and underscores.
+
+The Ricos playground automatically generates node IDs, but if you aren't using the playground, you must add node IDs yourself.
+
+Tagged unions
+Some nodes, which are specified in this reference are tagged unions. Tagged unions are a way to represent a value that can be one of several different, but fixed, types. In Ricos, these types are different nodes.
+
+Tagged unions contain a tag that define which type the value is. In Ricos, this tag is the type field, and it tells the Ricos Content viewer how to display the content.
+
+Learn more about tagged unions.
+
+Formats
+Format	Description
+WEB_URL	A URL that starts with http:// or https://.
+COLOR_HEX	A color in hexadecimal RGB or RGBA format, for example #FF0000 or #FF000050. COLOR_HEX accepts shorthand, for example #F00 or #F005.
+NODE_ID	See Node ID.
+Plugins
+Full list of Ricos plugins:
+
+actionButton
+appEmbed
+audio
+codeBlock
+collapsibleList
+divider
+file
+gallery
+giphy
+html
+image
+lineSpacing
+linkButton
+linkPreview
+link
+mention
+poll
+spoiler
+table
+textColor
+textHighlight
+video
+Root-level type
+RicosDocument
+Field	Type	Description
+nodes
+Required	Array <RootNode>	Array of nodes representing content elements, such as ParagraphNode or HeadingNode.
+metadata	Metadata	Information about the Ricos document itself, such as its version. Only relevant when building the Ricos document using the Ricos playground, in which case it is auto-generated.
+documentStyle	DocumentStyle	Includes styling to be applied throughout the Ricos document for the specified node types. For example, you can define general styling for headerOne, and then override some of the properties separately for a specific header.
+Nodes
+Nodes are the containers for content. Each node is used for a different type of content.
+
+Available nodes, sorted alphabetically.
+RootNode
+Used in: RicosDocument
+
+Nodes that can be added to the root level of nodes array.
+
+This type is a Tagged Union.
+
+Variant	Tag value	Description
+AppEmbedNode	APP_EMBED	Embeds an external content preview from Wix business solutions. For example, you can embed previews from the Wix Bookings, Wix Stores and Wix Events apps.
+AudioNode	AUDIO	Embeds and plays audio content directly in a webpage. Users can interact with the controls to play, pause, rewind, and adjust the volume of the audio.
+BlockquoteNode	BLOCKQUOTE	Used to visually distinguish quoted or cited content from the surrounding text. When rendered, it displays as the quoted text with indentation or other styling to visually separate it from the surrounding content.
+BulletedListNode	BULLETED_LIST	Bulleted list.
+ButtonNode	BUTTON	Button to trigger an action.
+CodeBlockNode	CODE_BLOCK	Presents code snippets, markup, or other text-based content that should be displayed exactly as it appears, without any interpretation or formatting applied by the browser. When rendered, it is displayed as the code block with a monospaced font, preserving indentation, line breaks, and spacing as specified in the code.
+CollapsibleListNode	COLLAPSIBLE_LIST	List of items where each item can be expanded or collapsed.
+DividerNode	DIVIDER	Horizontal line between different content.
+EmbedNode	EMBED	Embedded content when you include a link to a resource, without having to parse the resource directly. This provides a standardized way for web developers to include content such as videos, images, and other multimedia elements from supported providers. To learn more, see oembed.
+FileNode	FILE	File that is uploaded and accessed in a page. Files can be different types of content, such as text documents, images, and videos.
+GalleryNode	GALLERY	Collection of images displayed together.
+GifNode	GIF	GIF images.
+HeadingNode	HEADING	Indicates a heading or title of a section. There are 6 levels of headings, with 1 being the most prominent and 6 being the least.
+HtmlNode	HTML	HTML block that incorporates external content, such as interactive maps or entire web pages.
+ImageNode	IMAGE	Standalone images in a page.
+LinkPreviewNode	LINK_PREVIEW	Preview or summary of a webpage. Link previews include elements such as the title of the linked page, a brief description or excerpt of the content, and sometimes a thumbnail image or other relevant information.
+OrderedListNode	ORDERED_LIST	Numbered list.
+ParagraphNode	PARAGRAPH	Structures text content, providing a clear separation between different ideas or sections of text. Paragraphs are rendered with default styling that typically includes some space above and below the paragraph, making it visually distinct from the surrounding content.
+PollNode	POLL	Provides a question with several options, where the options' cumulative total may be shown.
+TableNode	TABLE	Data in rows and columns.
+VideoNode	VIDEO	Embeds and plays video content directly in a page. When rendered, it is displayed as the video player with the specified video file. Users can interact with the controls to play, pause, rewind, and adjust the volume of the video.
+ParagraphNode
+Used in: RootNode, BlockquoteNode, ListItemChildNode, TableCellChildNode, CollapsibleTitleChildNode, CollapsibleItemBodyChildNode
+
+Structures text content, providing a clear separation between different ideas or sections of text. Paragraphs are rendered with default styling that typically includes some space above and below the paragraph, making it visually distinct from the surrounding content.
+
+Field	Type	Description
+type
+Required	"PARAGRAPH"	Node type.
+Must be PARAGRAPH.
+nodes	Array <TextNode>	Paragraph children.
+id	string
+format NODE_ID	Node ID.
+style	NodeStyle	Vertical padding.
+Note: This node requires the lineSpacing plugin to be enabled.
+paragraphData	ParagraphData	Paragraph node attributes.
+ParagraphData
+Used in: ParagraphNode
+
+Field	Type	Description
+textStyle	TextStyle	Paragraph text styling.
+indentation	int32
+Paragraph margin from the left side.
+The indentation is measured relative to 40px. For example, if the indentation is 2, then the margin is equal to 80px.
+TextNode
+Used in: ParagraphNode, HeadingNode, CodeBlockNode, CaptionNode
+
+Text nodes hold the text itself, similar to how span tags hold text in HTML. Text nodes can't be nested and must contain a non-empty string. Their appearance and behavior can be modified using decorations.
+
+Field	Type	Description
+type
+Required	"TEXT"	Node type.
+Must be TEXT.
+textData
+Required	TextData	Text options.
+id	string
+format NODE_ID	Node ID.
+TextData
+Used in: TextNode
+
+Field	Type	Description
+text
+Required	string
+
+minLength: 1	Non-empty string to display as text.
+decorations	Array <Decoration>
+Unique Tags	Array of text decorations. A decoration can't appear twice in the array.
+HeadingNode
+Used in: RootNode, ListItemChildNode, TableCellChildNode, CollapsibleTitleChildNode, CollapsibleItemBodyChildNode
+
+Indicates a heading or title of a section. There are 6 levels of headings, with 1 being the most prominent and 6 being the least.
+
+Field	Type	Description
+type
+Required	"HEADING"	Node type.
+Must be HEADING.
+nodes	Array <TextNode>	Child nodes to define the heading text.
+id	string
+format NODE_ID	Node ID.
+style	NodeStyle	Heading styling, such as padding and background color.
+Note: This node requires the lineSpacing plugin to be enabled.
+headingData	HeadingData	Heading options.
+HeadingData
+Used in: HeadingNode
+
+Field	Type	Description
+level	int32
+
+minimum: 1
+maximum: 6	Heading size.
+Mi: 1
+Max: 6
+textStyle	TextStyle	Heading text styling, such as text alignment and line height.
+indentation	int32
+Heading margin from the left side.
+The indentation is measured relative to the font size em units by a ratio of 1.5. For example, if the indentation is 2, then the margin is equal to 3em. Therefore the margin is 3 times the size of the font.
+ImageNode
+Used in: RootNode, ListItemChildNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `image` plugin to be enabled.
+
+Standalone images in a page.
+
+Field	Type	Description
+type
+Required	"IMAGE"	Node type.
+Must be IMAGE.
+imageData
+Required	ImageData	Image options.
+id	string
+format NODE_ID	Node ID.
+nodes	Array <CaptionNode>	Child nodes to define an image caption.
+ImageData
+Used in: ImageNode
+
+Field	Type	Description
+image
+Required	Media	Image file details.
+containerData	PluginContainerData	Image container styling.
+link	Link	Image link details.
+disableExpand	boolean
+Whether the image expands to the full screen when clicked.
+Default: false
+altText	string
+Alternate text to display when the image doesn't load.
+caption
+Deprecated	string
+Deprecated. Use CaptionNode instead.
+disableDownload	boolean
+Whether the download image button is disabled.
+Default: false
+CaptionNode
+Used in: VideoNode, GifNode, ImageNode
+
+Caption container to be attached to media elements, such as images. Captions support formatted text content and can be styled independently from their parent nodes.
+
+Field	Type	Description
+type
+Required	"CAPTION"	Node type.
+Must be CAPTION.
+nodes
+Required	Array <TextNode>	
+id	string
+Caption node ID.
+style	NodeStyle	Defines the caption styling, such as padding and background color.
+Note: This node requires the lineSpacing plugin to be enabled.
+captionData	CaptionData	Caption options.
+CaptionData
+Used in: CaptionNode
+
+Field	Type	Description
+textStyle	TextStyle	Caption text styling.
+OrderedListNode
+Used in: RootNode, ListItemChildNode, TableCellChildNode, CollapsibleTitleChildNode, CollapsibleItemBodyChildNode
+
+Numbered list.
+
+Field	Type	Description
+type
+Required	"ORDERED_LIST"	Node type.
+Must be ORDERED_LIST.
+nodes
+Required	Array <ListItemNode>
+minItems: 1	List items.
+id	string
+format NODE_ID	Node ID.
+orderedListData	OrderedListData	Ordered list details.
+OrderedListData
+Used in: OrderedListNode
+
+Field	Type	Description
+indentation
+Deprecated	int32
+List margin from the left side.
+The indentation is measured relative to the font size em units by a ratio of 1.5. For example, if the indentation is 2, then the margin is equal to 3em. Therefore the margin is 3 times the size of the font.
+offset	int32
+Additional indentation of a list node. When offset is 0, the list node appears at its default nesting level. Higher values cause increased indentation.
+start	int32
+Number at the top of the numbered list.
+Default: 1
+BulletedListNode
+Used in: RootNode, ListItemChildNode, TableCellChildNode, CollapsibleTitleChildNode, CollapsibleItemBodyChildNode
+
+Bulleted list.
+
+Field	Type	Description
+type
+Required	"BULLETED_LIST"	Node type.
+Must be BULLETED_LIST.
+nodes
+Required	Array <ListItemNode>
+minItems: 1	List items.
+id	string
+format NODE_ID	Node ID.
+bulletedListData	BulletedListData	Bulleted list details.
+BulletedListData
+Used in: BulletedListNode
+
+Field	Type	Description
+indentation
+Deprecated	int32
+offset	int32
+Additional indentation of a list node. When offset is 0, the list node appears at its default nesting level. Higher values cause increased indentation.
+ListItemNode
+Used in: BulletedListNode, OrderedListNode
+
+Items in the nodes field must have the following structure and order:
+(PARAGRAPH|HEADING|IMAGE|VIDEO|GIF|GALLERY) (PARAGRAPH|BULLETED_LIST|ORDERED_LIST|HEADING|IMAGE|VIDEO|GIF|GALLERY)*
+
+Must start with a paragraph or heading, followed by any number of paragraphs, bulleted lists, or ordered lists.
+
+Field	Type	Description
+type
+Required	"LIST_ITEM"	Node type.
+Value: LIST_ITEM
+nodes
+Required	Array <ListItemChildNode>	Child nodes that the list item contains.
+Array items must adhere to the pattern described above this table.
+id	string
+format NODE_ID	Node ID.
+ListItemChildNode
+Used in: ListItemNode
+
+This type is a Tagged Union.
+
+Variant	Tag value	Description
+BulletedListNode	BULLETED_LIST	Bulleted list.
+GalleryNode	GALLERY	Collection of images displayed together.
+GifNode	GIF	GIF images.
+HeadingNode	HEADING	Indicates a heading or title of a section. There are 6 levels of headings, with 1 being the most prominent and 6 being the least.
+ImageNode	IMAGE	Standalone images in a page.
+OrderedListNode	ORDERED_LIST	Numbered list.
+ParagraphNode	PARAGRAPH	Structures text content, providing a clear separation between different ideas or sections of text. Paragraphs are rendered with default styling that typically includes some space above and below the paragraph, making it visually distinct from the surrounding content.
+VideoNode	VIDEO	Embeds and plays video content directly in a page. When rendered, it is displayed as the video player with the specified video file. Users can interact with the controls to play, pause, rewind, and adjust the volume of the video.
+BlockquoteNode
+Used in: RootNode, TableCellChildNode, CollapsibleTitleChildNode, CollapsibleItemBodyChildNode
+
+Used to visually distinguish quoted or cited content from the surrounding text. When rendered, it displays as the quoted text with indentation or other styling to visually separate it from the surrounding content.
+
+Field	Type	Description
+type
+Required	"BLOCKQUOTE"	Node type.
+Must be BLOCKQUOTE.
+nodes
+Required	Array <ParagraphNode>
+minItems: 1
+maxItems: 1	Child nodes to define a blockquote paragraph.
+id	string
+format NODE_ID	Node ID.
+blockquoteData	BlockquoteData	Blockquote details.
+style	NodeStyle	Defines the blockquote style, such as padding and background color.
+Note: This node requires the lineSpacing plugin to be enabled.
+BlockquoteData
+Used in: BlockquoteNode
+
+Field	Type	Description
+indentation	int32
+Blockquote margin from the left side.
+The indentation is measured relative to the font size em units by a ratio of 1.5. For example, if the indentation is 2, then the margin is equal to 3em. Therefore the margin is 3 times the size of the font.
+GifNode
+Used in: RootNode, ListItemChildNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `giphy` plugin to be enabled.
+
+GIF images.
+
+Field	Type	Description
+type
+Required	"GIF"	Node type.
+Must be GIF.
+gifData
+Required	GIFData	GIF details.
+id	string
+format NODE_ID	Node ID.
+nodes	Array <CaptionNode>	Child nodes to define a GIF caption.
+GIFData
+Used in: GifNode
+
+Field	Type	Description
+containerData	PluginContainerData	GIF container styling.
+original	GIF	Source for the full size GIF.
+downsized	GIF	Source for the downsized GIF.
+height	int32
+Height in pixels.
+width	int32
+Width in pixels.
+GIF
+Used in: GIFData
+
+Field	Type	Description
+gif	string
+format WEB_URL	GIF source URL.
+mp4	string
+format WEB_URL	MP4 source URL.
+still	string
+format WEB_URL	GIF thumbnail URL.
+VideoNode
+Used in: RootNode, ListItemChildNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `video` plugin to be enabled.
+
+Embeds and plays video content directly in a page. When rendered, it is displayed as the video player with the specified video file. Users can interact with the controls to play, pause, rewind, and adjust the volume of the video.
+
+Field	Type	Description
+type
+Required	"VIDEO"	Node type.
+Must be VIDEO.
+videoData
+Required	VideoData	Video details.
+id	string
+format NODE_ID	Node ID.
+nodes	Array <CaptionNode>	Child nodes to define a video caption.
+VideoData
+Used in: VideoNode
+
+Field	Type	Description
+video
+Required	Media	Video file details.
+containerData	PluginContainerData	Video container styling.
+thumbnail	Media	Video thumbnail details.
+disableDownload	boolean
+Whether the video download button is disabled.
+Default: false
+title	string
+Video title.
+options	PlaybackOptions	Playback details.
+PlaybackOptions
+Used in: VideoData
+
+Field	Type	Description
+autoPlay	boolean
+Whether the media automatically starts playing after opening a page.
+playInLoop	boolean
+Whether the media is looped.
+showControls	boolean
+Whether to show the media controls.
+TableNode
+Used in: RootNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `table` plugin to be enabled.
+
+Data in rows and columns.
+
+Field	Type	Description
+type
+Required	"TABLE"	Node type.
+Must be TABLE.
+nodes
+Required	Array <TableRowNode>
+minItems: 1	Child nodes to define table rows.
+id	string
+format NODE_ID	Node ID.
+tableData	TableData	Table details.
+TableRowNode
+Used in: TableNode
+
+Field	Type	Description
+type
+Required	"TABLE_ROW"	Node type.
+Must be TABLE_ROW.
+nodes
+Required	Array <TableCellNode>
+minItems: 1	Child nodes to define table cells.
+id	string
+format NODE_ID	Node ID.
+TableData
+Used in: TableNode
+
+Field	Type	Description
+containerData	PluginContainerData	Table container styling.
+dimensions	TableData_Dimensions	Table dimensions.
+rowHeader	boolean
+Whether the table's first row is a heading.
+Default: false
+columnHeader	boolean
+Whether the table's first column is a heading.
+Default: false
+TableData_Dimensions
+Used in: TableData
+
+Field	Type	Description
+colsWidthRatio	Array <float64
+>	Each column width as a fraction to the width of table.
+rowsHeight	Array <uint32
+>	Height of each row.
+colsMinWidth	Array <uint32
+>	Minimum width of each column.
+TableCellNode
+Used in: TableRowNode
+
+Field	Type	Description
+type
+Required	"TABLE_CELL"	Node type.
+Must be TABLE_CELL.
+nodes
+Required	Array <TableCellChildNode>
+minItems: 1	Child nodes to define cell content.
+id	string
+format NODE_ID	Node ID.
+tableCellData	TableCellData	Table cell details.
+TableCellChildNode
+Used in: TableCellNode
+
+Table cell content node.
+
+This type is a Tagged Union.
+
+Variant	Tag value	Description
+AppEmbedNode	APP_EMBED	Embeds an external content preview from Wix business solutions. For example, you can embed previews from the Wix Bookings, Wix Stores and Wix Events apps.
+AudioNode	AUDIO	Embeds and plays audio content directly in a webpage. Users can interact with the controls to play, pause, rewind, and adjust the volume of the audio.
+BlockquoteNode	BLOCKQUOTE	Used to visually distinguish quoted or cited content from the surrounding text. When rendered, it displays as the quoted text with indentation or other styling to visually separate it from the surrounding content.
+BulletedListNode	BULLETED_LIST	Bulleted list.
+ButtonNode	BUTTON	Button to trigger an action.
+CodeBlockNode	CODE_BLOCK	Presents code snippets, markup, or other text-based content that should be displayed exactly as it appears, without any interpretation or formatting applied by the browser. When rendered, it is displayed as the code block with a monospaced font, preserving indentation, line breaks, and spacing as specified in the code.
+DividerNode	DIVIDER	Horizontal line between different content.
+EmbedNode	EMBED	Embedded content when you include a link to a resource, without having to parse the resource directly. This provides a standardized way for web developers to include content such as videos, images, and other multimedia elements from supported providers. To learn more, see oembed.
+FileNode	FILE	File that is uploaded and accessed in a page. Files can be different types of content, such as text documents, images, and videos.
+GifNode	GIF	GIF images.
+HeadingNode	HEADING	Indicates a heading or title of a section. There are 6 levels of headings, with 1 being the most prominent and 6 being the least.
+HtmlNode	HTML	HTML block that incorporates external content, such as interactive maps or entire web pages.
+ImageNode	IMAGE	Standalone images in a page.
+LinkPreviewNode	LINK_PREVIEW	Preview or summary of a webpage. Link previews include elements such as the title of the linked page, a brief description or excerpt of the content, and sometimes a thumbnail image or other relevant information.
+OrderedListNode	ORDERED_LIST	Numbered list.
+ParagraphNode	PARAGRAPH	Structures text content, providing a clear separation between different ideas or sections of text. Paragraphs are rendered with default styling that typically includes some space above and below the paragraph, making it visually distinct from the surrounding content.
+VideoNode	VIDEO	Embeds and plays video content directly in a page. When rendered, it is displayed as the video player with the specified video file. Users can interact with the controls to play, pause, rewind, and adjust the volume of the video.
+TableCellData
+Used in: TableCellNode
+
+Field	Type	Description
+cellStyle	TableCellData_CellStyle	Cell styling.
+borderColors	TableCellData_BorderColors	Cell border colors.
+TableCellData_CellStyle
+Used in: TableCellData
+
+Field	Type	Description
+verticalAlignment	enum: "TOP", "MIDDLE", "BOTTOM"	Vertical alignment for the cell's text.
+backgroundColor	string
+format COLOR_HEX	Cell background color as a hexadecimal value.
+TableCellData_BorderColors
+Used in: TableCellData
+
+Field	Type	Description
+left	string
+format COLOR_HEX	Left border color as a hexadecimal value.
+right	string
+format COLOR_HEX	Right border color as a hexadecimal value.
+top	string
+format COLOR_HEX	Top border color as a hexadecimal value.
+bottom	string
+format COLOR_HEX	Bottom border color as a hexadecimal value.
+AppEmbedNode
+Used in: RootNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `appEmbed` plugin to be enabled.
+
+Embeds an external content preview from Wix business solutions. For example, you can embed previews from the Wix Bookings, Wix Stores and Wix Events apps.
+
+Field	Type	Description
+type
+Required	"APP_EMBED"	Node type.
+Must be APP_EMBED.
+appEmbedData
+Required	AppEmbedData	Embedded Wix app.
+id	string
+format NODE_ID	Node ID.
+AppEmbedData
+Used in: AppEmbedNode
+
+This type is a Tagged Union.
+
+Variant	Tag value	Description
+AppEmbedDataBooking	BOOKING	Embeds a booking from Wix Bookings.
+AppEmbedDataEvent	EVENT	Embeds an event from Wix Events.
+AppEmbedDataProduct	PRODUCT	Embedded a product from Wix Stores.
+AppEmbedDataProduct
+Used in: AppEmbedData
+
+Embedded a product from Wix Stores.
+
+Field	Type	Description
+type
+Required	"PRODUCT"	Must be PRODUCT.
+name
+Required	string
+Embedded content name.
+url
+Required	string
+Embedded content URL.
+image	Media	Embedded content thumbnail.
+itemId	string
+Embedded content ID.
+imageSrc
+Deprecated	string
+Deprecated: Use image instead.
+AppEmbedDataEvent
+Used in: AppEmbedData
+
+Embeds an event from Wix Events.
+
+Field	Type	Description
+type
+Required	"EVENT"	Must be EVENT.
+name
+Required	string
+Embedded content name.
+url
+Required	string
+Embedded content URL.
+eventData	AppEmbedData_EventData	Embedded event content.
+image	Media	Embedded content thumbnail.
+itemId	string
+Embedded content ID.
+imageSrc
+Deprecated	string
+Deprecated: Use image instead.
+AppEmbedDataBooking
+Used in: AppEmbedData
+
+Embeds a booking from Wix Bookings.
+
+Field	Type	Description
+type
+Required	"BOOKING"	
+name
+Required	string
+Embedded content name.
+url
+Required	string
+Embedded content URL.
+image	Media	Embedded content thumbnail.
+itemId	string
+Embedded content ID.
+bookingData	AppEmbedData_BookingData	Embedded booking content.
+imageSrc
+Deprecated	string
+Deprecated: Use image instead.
+AppEmbedData_BookingData
+Used in: AppEmbedDataBooking
+
+Field	Type	Description
+durations	string
+Booking duration in minutes.
+AppEmbedData_EventData
+Used in: AppEmbedDataEvent
+
+Field	Type	Description
+scheduling	string
+Event schedule.
+location	string
+Event location.
+EmbedNode
+Used in: RootNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `linkPreview` plugin to be enabled.
+
+Embedded content when you include a link to a resource, without having to parse the resource directly. This provides a standardized way for web developers to include content such as videos, images, and other multimedia elements from supported providers. To learn more, see oembed.
+
+Field	Type	Description
+type
+Required	"EMBED"	Node type.
+Must be EMBED.
+embedData
+Required	EmbedData	oEmbed details.
+id	string
+format NODE_ID	Node ID.
+EmbedData
+Used in: EmbedNode
+
+Field	Type	Description
+containerData	PluginContainerData	oEmbed node container styling.
+oembed	Oembed	oEmbed details.
+src	string
+Original asset source.
+Oembed
+Used in: EmbedData
+
+Field	Type	Description
+type	string
+Resource type.
+width	int32
+Width of the resource specified in the url field in pixels.
+height	int32
+Height of the resource specified in the url field in pixels.
+title	string
+Resource title.
+url	string
+Resource source URL.
+html	string
+HTML to embed a video player. The HTML should have no padding or margins.
+authorName	string
+Name of the author or owner of the resource.
+authorUrl	string
+URL for the author or owner of the resource.
+providerName	string
+Name of the resource provider.
+providerUrl	string
+URL for the resource provider.
+thumbnailUrl	string
+Thumbnail image URL for the resource. If defined, thumbnailWidth and thumbnailHeight must also be defined.
+thumbnailWidth	string
+Resource's thumbnail image width. If defined, thumbnailUrl and thumbnailHeight must also be defined.
+thumbnailHeight	string
+Resource's thumbnail image height. If defined, thumbnailUrl and thumbnailWidthmust also be defined.
+videoUrl	string
+Embedded video URL.
+version	string
+The oEmbed version number. Must be 1.0.
+DividerNode
+Used in: RootNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `divider` plugin to be enabled.
+
+Horizontal line between different content.
+
+Field	Type	Description
+type
+Required	"DIVIDER"	Node type.
+Must be DIVIDER.
+id	string
+format NODE_ID	Node ID.
+dividerData	DividerData	Divider details.
+DividerData
+Used in: DividerNode
+
+Field	Type	Description
+containerData	PluginContainerData	Divider container styling.
+lineStyle	enum: "SINGLE", "DOUBLE", "DASHED", "DOTTED"	Divider line style.
+width	enum: "LARGE", "MEDIUM", "SMALL"	Divider width.
+alignment	enum: "CENTER", "LEFT", "RIGHT"	Divider alignment.
+CodeBlockNode
+Used in: RootNode, TableCellChildNode, CollapsibleTitleChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `codeBlock` plugin to be enabled.
+
+Presents code snippets, markup, or other text-based content that should be displayed exactly as it appears, without any interpretation or formatting applied by the browser. When rendered, it is displayed as the code block with a monospaced font, preserving indentation, line breaks, and spacing as specified in the code.
+
+Field	Type	Description
+type
+Required	"CODE_BLOCK"	Node type.
+VMust be CODE_BLOCK.
+nodes	Array <TextNode>	Child nodes to define a code block text.
+id	string
+format NODE_ID	Node ID.
+codeBlockData	CodeBlockData	Code block details.
+style	NodeStyle	Code block styling, such as padding and background color.
+Note: This node requires the lineSpacing plugin to be enabled.
+CodeBlockData
+Used in: CodeBlockNode
+
+Field	Type	Description
+textStyle	TextStyle	Defines the text styling, such as alignment and line height.
+LinkPreviewNode
+Used in: RootNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `linkPreview` plugin to be enabled.
+
+Preview or summary of a webpage. Link previews include elements such as the title of the linked page, a brief description or excerpt of the content, and sometimes a thumbnail image or other relevant information.
+
+Field	Type	Description
+type
+Required	"LINK_PREVIEW"	Node type.
+Must be LINK_PREVIEW.
+linkPreviewData
+Required	LinkPreviewData	Link preview details.
+id	string
+format NODE_ID	Node ID.
+LinkPreviewData
+Used in: LinkPreviewNode
+
+Field	Type	Description
+containerData	PluginContainerData	Link preview container styling.
+link	Link	Link details.
+title	string
+Preview title.
+thumbnailUrl	string
+Preview thumbnail URL.
+description	string
+Preview description.
+html	string
+Preview content as HTML.
+AudioNode
+Used in: RootNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `audio` plugin to be enabled.
+
+Embeds and plays audio content directly in a webpage. Users can interact with the controls to play, pause, rewind, and adjust the volume of the audio.
+
+Field	Type	Description
+type
+Required	"AUDIO"	Node type.
+Must be AUDIO.
+id	string
+format NODE_ID	Node ID.
+audioData	AudioData	Audio details.
+AudioData
+Used in: AudioNode
+
+Field	Type	Description
+containerData	PluginContainerData	Audio node container styling.
+audio	Media	Audio file details.
+disableDownload	boolean
+Whether the audio download button is disabled.
+Default: false
+coverImage	Media	Cover image.
+name	string
+Track name.
+authorName	string
+Author name.
+html	string
+HTML version of the audio node.
+GalleryNode
+Used in: RootNode, ListItemChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `gallery` plugin to be enabled.
+
+Collection of images displayed together.
+
+Field	Type	Description
+type
+Required	"GALLERY"	Node type.
+Must be GALLERY.
+galleryData
+Required	GalleryData	Gallery node details.
+id	string
+format NODE_ID	Node ID.
+GalleryData
+Used in: GalleryNode
+
+Field	Type	Description
+items
+Required	Array <GalleryData_Item>
+minItems: 1	Gallery items details.
+containerData	PluginContainerData	Gallery container styling.
+options	GalleryOptions	Gallery appearance options.
+disableExpand	boolean
+Whether the expand button is disabled.
+Default: false
+disableDownload	boolean
+Whether the download button is disabled.
+Default: false
+GalleryOptions
+Used in: GalleryData
+
+Field	Type	Description
+layout	GalleryOptions_Layout	Gallery layout.
+item	GalleryOptions_ItemStyle	Styling for gallery items.
+thumbnails	GalleryOptions_Thumbnails	Styling for gallery thumbnail images.
+GalleryOptions_Layout
+Used in: GalleryOptions
+
+Field	Type	Description
+type	enum: "COLLAGE", "MASONRY", "GRID", "THUMBNAIL", "SLIDER", "SLIDESHOW", "PANORAMA", "COLUMN", "MAGIC", "FULLSIZE"	Gallery layout. Supported values:
+- COLLAGE: Presents images in various sizes and positions, creating an artistic or dynamic layout.
+- MASONRY: Grid-based design that places items in optimal positions based on available vertical space, creating an arrangement where items of varying heights fit together like bricks in a wall.
+- GRID: A layout structure that organizes items into rows and columns, creating a uniform arrangement of images.
+- THUMBNAIL: Smaller, scaled-down version of an image that serves as a preview.
+- SLIDER: Component that allows users to browse through a set of images by sliding or swiping through them, typically in a confined viewing area.
+- SLIDESHOW: A component that automatically or manually transitions through a set of images in a designated area.
+- PANORAMA: Wide-angle or 360-degree image that allows users to view an extended horizontal view of a scene.
+- COLUMN: Arrangement of the gallery items in vertical sections.
+- MAGIC: Visually stunning, dynamic effects that enhance the user experience.
+- FULLSIZE: A layout where each image or item is displayed at its full size, sometimes taking up the entire viewport or a significant portion of the screen.
+horizontalScroll	boolean
+Whether the horizontal scroll is enabled.
+Default: true, unless the type field is set to GRID or COLLAGE.
+orientation	enum: "ROWS", "COLUMNS"	Gallery orientation.
+numberOfColumns	int32
+Number of columns to display on computer screens.
+mobileNumberOfColumns	int32
+Number of columns to display on mobile phone screens.
+GalleryOptions_ItemStyle
+Used in: GalleryOptions
+
+Field	Type	Description
+targetSize	int32
+Dimensions for each gallery item in pixels. Behavior may change with gallery type.
+ratio	float64
+Height to width ratio.
+crop	enum: "FILL", "FIT"	Cropping strategy. Supported values:
+- FILL: Each item in the gallery is cropped and resized to completely fill its container.
+- FIT: Each item in the gallery is resized to fit exactly in its container without cropping.
+spacing	int32
+Spacing between gallery items in pixels.
+GalleryOptions_Thumbnails
+Used in: GalleryOptions
+
+Field	Type	Description
+placement	enum: "TOP", "RIGHT", "BOTTOM", "LEFT", "NONE"	Thumbnail alignment.
+spacing	int32
+Spacing between thumbnails in pixels.
+GalleryData_Item
+Used in: GalleryData
+
+You must provide exactly one of the following fields: image, video.
+Field	Type	Description
+title	string
+Item title.
+altText	string
+Item's alternative text.
+image
+Exactly one of	GalleryData_Item_Image	Image item.
+video
+Exactly one of	GalleryData_Item_Video	Video item.
+GalleryData_Item_Video
+Used in: GalleryData_Item
+
+Field	Type	Description
+media
+Required	Media	Video file details.
+thumbnail	Media	Video thumbnail file details.
+GalleryData_Item_Image
+Used in: GalleryData_Item
+
+Field	Type	Description
+media
+Required	Media	Image file details.
+link	Link	Link details for images, if relevant.
+CollapsibleListNode
+Used in: RootNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `collapsibleList` plugin to be enabled.
+
+List of items where each item can be expanded or collapsed.
+
+Field	Type	Description
+type
+Required	"COLLAPSIBLE_LIST"	Node type.
+Must be COLLAPSIBLE_LIST
+nodes
+Required	Array <CollapsibleItemNode>
+minItems: 1	Collapsible list child nodes.
+id	string
+format NODE_ID	Node ID.
+collapsibleListData	CollapsibleListData	Collapsible list details.
+CollapsibleListData
+Used in: CollapsibleListNode
+
+Field	Type	Description
+containerData	PluginContainerData	Collapsible list container styling.
+expandOnlyOne	boolean
+Whether only one item can be expanded at a time.
+Default: false.
+initialExpandedItems	enum: "FIRST", "ALL", "NONE"	Sets which items are automatically expanded after the page loads.
+direction	enum: "LTR", "RTL"	Direction of the text in the list. Supported values:
+- LTR: Left to right.
+- RTL: Right to left.
+isQapageData	boolean
+Whether the collapsible item will appear in search results as an FAQ.
+CollapsibleItemNode
+Used in: CollapsibleListNode
+
+Items in the nodes field must have the following structure and order:
+COLLAPSIBLE_ITEM_TITLE COLLAPSIBLE_ITEM_BODY
+
+Must contain title as the first item and body as the second.
+
+Field	Type	Description
+type
+Required	"COLLAPSIBLE_ITEM"	Node type.
+Must be COLLAPSIBLE_ITEM
+nodes
+Required	Array <CollapsibleItemChildNode>	Collapsible list item.
+Array items must adhere to the pattern described above this table.
+id	string
+format NODE_ID	Node ID.
+CollapsibleItemChildNode
+Used in: CollapsibleItemNode
+
+This type is a Tagged Union.
+
+Variant	Tag value	Description
+CollapsibleItemBodyNode	COLLAPSIBLE_ITEM_BODY	Collapsible list item body.
+CollapsibleItemTitleNode	COLLAPSIBLE_ITEM_TITLE	Collapsible list item title.
+CollapsibleItemTitleNode
+Used in: CollapsibleItemChildNode
+
+Collapsible list item title.
+
+Field	Type	Description
+type
+Required	"COLLAPSIBLE_ITEM_TITLE"	Node type.
+Must be COLLAPSIBLE_ITEM_TITLE.
+nodes
+Required	Array <CollapsibleTitleChildNode>
+minItems: 1
+maxItems: 1	Collapsible list item title child nodes.
+id	string
+format NODE_ID	Node ID.
+CollapsibleTitleChildNode
+Used in: CollapsibleItemTitleNode
+
+This type is a Tagged Union.
+
+Variant	Tag value	Description
+BlockquoteNode	BLOCKQUOTE	Used to visually distinguish quoted or cited content from the surrounding text. When rendered, it displays as the quoted text with indentation or other styling to visually separate it from the surrounding content.
+BulletedListNode	BULLETED_LIST	Bulleted list.
+CodeBlockNode	CODE_BLOCK	Presents code snippets, markup, or other text-based content that should be displayed exactly as it appears, without any interpretation or formatting applied by the browser. When rendered, it is displayed as the code block with a monospaced font, preserving indentation, line breaks, and spacing as specified in the code.
+HeadingNode	HEADING	Indicates a heading or title of a section. There are 6 levels of headings, with 1 being the most prominent and 6 being the least.
+OrderedListNode	ORDERED_LIST	Numbered list.
+ParagraphNode	PARAGRAPH	Structures text content, providing a clear separation between different ideas or sections of text. Paragraphs are rendered with default styling that typically includes some space above and below the paragraph, making it visually distinct from the surrounding content.
+CollapsibleItemBodyNode
+Used in: CollapsibleItemChildNode
+
+Collapsible list item body.
+
+Field	Type	Description
+type
+Required	"COLLAPSIBLE_ITEM_BODY"	Node type.
+Must be COLLAPSIBLE_ITEM_BODY.
+nodes
+Required	Array <CollapsibleItemBodyChildNode>
+minItems: 1	Collapsible list item body child nodes.
+id	string
+format NODE_ID	Node ID.
+CollapsibleItemBodyChildNode
+Used in: CollapsibleItemBodyNode
+
+Collapsible list item body.
+
+This type is a Tagged Union.
+
+Variant	Tag value	Description
+AppEmbedNode	APP_EMBED	Embeds an external content preview from Wix business solutions. For example, you can embed previews from the Wix Bookings, Wix Stores and Wix Events apps.
+AudioNode	AUDIO	Embeds and plays audio content directly in a webpage. Users can interact with the controls to play, pause, rewind, and adjust the volume of the audio.
+BlockquoteNode	BLOCKQUOTE	Used to visually distinguish quoted or cited content from the surrounding text. When rendered, it displays as the quoted text with indentation or other styling to visually separate it from the surrounding content.
+BulletedListNode	BULLETED_LIST	Bulleted list.
+ButtonNode	BUTTON	Button to trigger an action.
+CodeBlockNode	CODE_BLOCK	Presents code snippets, markup, or other text-based content that should be displayed exactly as it appears, without any interpretation or formatting applied by the browser. When rendered, it is displayed as the code block with a monospaced font, preserving indentation, line breaks, and spacing as specified in the code.
+CollapsibleListNode	COLLAPSIBLE_LIST	List of items where each item can be expanded or collapsed.
+DividerNode	DIVIDER	Horizontal line between different content.
+EmbedNode	EMBED	Embedded content when you include a link to a resource, without having to parse the resource directly. This provides a standardized way for web developers to include content such as videos, images, and other multimedia elements from supported providers. To learn more, see oembed.
+FileNode	FILE	File that is uploaded and accessed in a page. Files can be different types of content, such as text documents, images, and videos.
+GalleryNode	GALLERY	Collection of images displayed together.
+GifNode	GIF	GIF images.
+HeadingNode	HEADING	Indicates a heading or title of a section. There are 6 levels of headings, with 1 being the most prominent and 6 being the least.
+HtmlNode	HTML	HTML block that incorporates external content, such as interactive maps or entire web pages.
+ImageNode	IMAGE	Standalone images in a page.
+LinkPreviewNode	LINK_PREVIEW	Preview or summary of a webpage. Link previews include elements such as the title of the linked page, a brief description or excerpt of the content, and sometimes a thumbnail image or other relevant information.
+OrderedListNode	ORDERED_LIST	Numbered list.
+ParagraphNode	PARAGRAPH	Structures text content, providing a clear separation between different ideas or sections of text. Paragraphs are rendered with default styling that typically includes some space above and below the paragraph, making it visually distinct from the surrounding content.
+PollNode	POLL	Provides a question with several options, where the options' cumulative total may be shown.
+TableNode	TABLE	Data in rows and columns.
+VideoNode	VIDEO	Embeds and plays video content directly in a page. When rendered, it is displayed as the video player with the specified video file. Users can interact with the controls to play, pause, rewind, and adjust the volume of the video.
+FileNode
+Used in: RootNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `file` plugin to be enabled.
+
+File that is uploaded and accessed in a page. Files can be different types of content, such as text documents, images, and videos.
+
+Field	Type	Description
+type
+Required	"FILE"	Node type.
+Must be FILE.
+fileData
+Required	FileData	File details.
+id	string
+format NODE_ID	Node ID.
+FileData
+Used in: FileNode
+
+Field	Type	Description
+containerData	PluginContainerData	File container styling.
+src	FileSource	File data source.
+name	string
+File name.
+type	string
+File type.
+size
+Deprecated	uint32
+Deprecated. Replaced by sizeInKb
+sizeInKb	string
+File size in KB.
+pdfSettings	FileData_PDFSettings	Settings for PDF files.
+mimeType	string
+File MIME type.
+path	string
+File path.
+FileData_PDFSettings
+Used in: FileData
+
+Field	Type	Description
+viewMode	enum: "NONE", "FULL", "MINI"	PDF view mode. Supported values:
+- NONE: PDF isn't displayed.
+- FULL: Full PDF page view is displayed.
+- MINI: Mini view of the PDF is displayed.
+disableDownload	boolean
+Whether the PDF download button is disabled.
+Default: false
+disablePrint	boolean
+Whether the PDF print button is disabled.
+Default: false
+ButtonNode
+Used in: RootNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `actionButton`, `linkButton` plugins to be enabled.
+
+Button to trigger an action.
+
+Field	Type	Description
+type
+Required	"BUTTON"	Node type.
+Must be BUTTON
+buttonData
+Required	ButtonData	Button details.
+id	string
+format NODE_ID	Node ID.
+ButtonData
+Used in: ButtonNode
+
+Field	Type	Description
+type
+Required	enum: "LINK", "ACTION"	Button type. Supported values:
+- LINK: Redirects to a webpage.
+- ACTION: Performs an action.
+text
+Required	string
+Button text.
+containerData	PluginContainerData	Button container styling.
+styles	ButtonData_Styles	Button styling.
+link	Link	Button link details.
+ButtonData_Styles
+Used in: ButtonData
+
+Field	Type	Description
+border	ButtonData_Styles_Border	Border properties.
+colors	ButtonData_Styles_Colors	Color properties.
+ButtonData_Styles_Colors
+Used in: ButtonData_Styles
+
+Field	Type	Description
+text	string
+Text color as a hexadecimal value.
+border	string
+Border color as a hexadecimal value.
+background	string
+Background color as a hexadecimal value.
+ButtonData_Styles_Border
+Used in: ButtonData_Styles
+
+Field	Type	Description
+width	int32
+Border width in pixels.
+radius	int32
+Border radius in pixels.
+PollNode
+Used in: RootNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `poll` plugin to be enabled.
+
+Provides a question with several options, where the options' cumulative total may be shown.
+
+Field	Type	Description
+type
+Required	"POLL"	Node type.
+Must be POLL.
+pollData
+Required	PollData	Poll details.
+id	string
+format NODE_ID	Node ID.
+PollData
+Used in: PollNode
+
+Field	Type	Description
+containerData	PluginContainerData	Poll container styling.
+poll	PollData_Poll	Poll data.
+layout	PollData_Layout	Poll layout settings.
+design	PollData_Design	Poll design.
+PollData_Poll
+Used in: PollData
+
+Field	Type	Description
+id	string
+format NODE_ID	Node ID.
+title	string
+Poll title.
+creatorId	string
+Poll creator ID.
+image	Media	Main poll image.
+options	Array <PollData_Poll_Option>	Poll details.
+settings	PollData_Poll_Settings	Poll display settings.
+PollData_Poll_Option
+Used in: PollData_Poll
+
+Field	Type	Description
+id	string
+Poll option ID.
+title	string
+Poll option title
+image	Media	Image displayed with the option.
+PollData_Poll_Settings
+Used in: PollData_Poll
+
+Field	Type	Description
+permissions	PollData_Poll_Settings_Permissions	Voting permission settings.
+showVoters	boolean
+Whether to display the voters in the vote results.
+Default: true.
+showVotesCount	boolean
+Whether to display the vote count.
+Default: true.
+PollData_Poll_Settings_Permissions
+Used in: PollData_Poll_Settings
+
+Field	Type	Description
+view	enum: "CREATOR", "VOTERS", "EVERYONE"	Who can view the poll results.
+vote	enum: "SITE_MEMBERS", "ALL"	Who can vote.
+allowMultipleVotes	boolean
+Whether a user can vote multiple times.
+Default: false
+PollData_Layout
+Used in: PollData
+
+Field	Type	Description
+poll	PollData_Layout_PollLayout	Poll layout settings.
+options	PollData_Layout_OptionLayout	Poll options layout settings.
+PollData_Layout_PollLayout
+Used in: PollData_Layout
+
+Field	Type	Description
+type	enum: "LIST", "GRID"	Voting options layout.
+direction	enum: "LTR", "RTL"	Direction of the text in the poll. Supported values:
+- LTR: Left to right.
+- RTL: Right to left.
+enableImage	boolean
+Whether to display the main poll image.
+Default: false
+PollData_Layout_OptionLayout
+Used in: PollData_Layout
+
+Field	Type	Description
+enableImage	boolean
+Whether to display option images.
+Defaults: false.
+PollData_Design
+Used in: PollData
+
+Field	Type	Description
+poll	PollData_Design_PollDesign	Poll styling.
+options	PollData_Design_OptionDesign	Voting options styling.
+PollData_Design_PollDesign
+Used in: PollData_Design
+
+Field	Type	Description
+background	PollData_Design_PollDesign_Background	Poll background styling.
+borderRadius	int32
+Border radius in pixels.
+PollData_Design_PollDesign_Background
+Used in: PollData_Design_PollDesign
+
+This type is a Tagged Union.
+
+Variant	Tag value	Description
+PollData_Background_ColorVariant	COLOR	
+PollData_Background_GradientVariant	GRADIENT	
+PollData_Background_ImageVariant	IMAGE	
+PollData_Background_ColorVariant
+Used in: PollData_Design_PollDesign_Background
+
+Field	Type	Description
+type
+Required	"COLOR"	
+color	string
+format COLOR_HEX	Background color as a hexademical value.
+PollData_Background_ImageVariant
+Used in: PollData_Design_PollDesign_Background
+
+Field	Type	Description
+type
+Required	"IMAGE"	
+image	Media	Image to use for the background.
+PollData_Background_GradientVariant
+Used in: PollData_Design_PollDesign_Background
+
+Field	Type	Description
+type
+Required	"GRADIENT"	
+gradient	PollData_Design_PollDesign_Background_Gradient	Gradient background details.
+PollData_Design_PollDesign_Background_Gradient
+Used in: PollData_Background_GradientVariant
+
+Field	Type	Description
+angle	int32
+Gradient angle in degrees.
+startColor	string
+format COLOR_HEX	Start color as a hexadecimal value.
+lastColor	string
+format COLOR_HEX	End color as a hexadecimal value.
+PollData_Design_OptionDesign
+Used in: PollData_Design
+
+Field	Type	Description
+borderRadius	int32
+Border radius in pixels.
+HtmlNode
+Used in: RootNode, TableCellChildNode, CollapsibleItemBodyChildNode
+
+Note: This type requires the `html` plugin to be enabled.
+
+HTML block that incorporates external content, such as interactive maps or entire web pages.
+
+Field	Type	Description
+type
+Required	"HTML"	Node type.
+Mst be HTML.
+htmlData
+Required	HTMLData	HTML details.
+id	string
+format NODE_ID	Node ID.
+HTMLData
+Used in: HtmlNode
+
+You must provide at least one of the following fields: url, html.
+Field	Type	Description
+containerData	PluginContainerData	HTML node container styling.
+source	enum: "HTML", "ADSENSE"	HTML code type. Possible values:
+- HTML: HTML code.
+- ADSENSE: Service provided by Google for rendering advertisements on web pages.
+url
+At least one of	string
+HTML code URL.
+html
+At least one of	string
+HTML code.
+Decorations
+Decorations are styles applied to text in nodes. A node can accept multiple styles at once.
+
+Important:
+Applying the same style more than once to the same node may cause an error.
+
+Decoration
+Used in: TextNodeStyle, TextData
+
+This type is a Tagged Union.
+
+Variant	Tag value	Description
+AnchorDecoration	ANCHOR	Makes clickable text a different color. The link navigates to another section of the same page.
+BoldDecoration	BOLD	Bolds text, which makes it appear thicker and more prominent than normal text.
+ColorDecoration	COLOR	Styles text using background and text colors.
+Note: This decoration requires the colorDecoration plugin to be enabled.
+FontSizeDecoration	FONT_SIZE	Text font size.
+ItalicDecoration	ITALIC	Italicizes text, which makes it appear slanted or italicized. Italics are typically used for emphasis, citations, or to distinguish certain types of content.
+LinkDecoration	LINK	Makes clickable text a different color. The link navigates to another webpage or resource.
+Note: This decoration requires the link plugin to be enabled.
+MentionDecoration	MENTION	Text that mentions a specific user, often in social media platforms, forums, or content management systems.
+Note: This decoration requires the mention plugin to be enabled.
+SpoilerDecoration	SPOILER	Blurs text.
+Note: This decoration requires the spoiler plugin to be enabled.
+UnderlineDecoration	UNDERLINE	Underlines text.
+BoldDecoration
+Used in: Decoration
+
+Bolds text, which makes it appear thicker and more prominent than normal text.
+
+Field	Type	Description
+type
+Required	"BOLD"	Decoration type.
+Must be BOLD.
+fontWeightValue	float32
+Font weight.
+ItalicDecoration
+Used in: Decoration
+
+Italicizes text, which makes it appear slanted or italicized. Italics are typically used for emphasis, citations, or to distinguish certain types of content.
+
+Field	Type	Description
+type
+Required	"ITALIC"	Decoration type.
+Must be ITALIC.
+italicData	boolean
+Whether to enable the italic text.
+UnderlineDecoration
+Used in: Decoration
+
+Underlines text.
+
+Field	Type	Description
+type
+Required	"UNDERLINE"	Decoration type.
+Must be UNDERLINE.
+underlineData	boolean
+Whether to underline the text.
+SpoilerDecoration
+Used in: Decoration
+
+Note: This type requires the `spoiler` plugin to be enabled.
+
+Blurs text.
+Note: This decoration requires the spoiler plugin to be enabled.
+
+Field	Type	Description
+type
+Required	"SPOILER"	Decoration type.
+Must be SPOILER.
+spoilerData	SpoilerData	Spoiler details.
+SpoilerData
+Used in: SpoilerDecoration
+
+Field	Type	Description
+id	string
+format NODE_ID	Node ID.
+AnchorDecoration
+Used in: Decoration
+
+Makes clickable text a different color. The link navigates to another section of the same page.
+
+Field	Type	Description
+type
+Required	"ANCHOR"	Decoration type.
+Must be ANCHOR.
+anchorData	AnchorData	Anchor details.
+AnchorData
+Used in: AnchorDecoration
+
+Field	Type	Description
+anchor	string
+Target Node ID to redirect to.
+MentionDecoration
+Used in: Decoration
+
+Note: This type requires the `mention` plugin to be enabled.
+
+Text that mentions a specific user, often in social media platforms, forums, or content management systems.
+Note: This decoration requires the mention plugin to be enabled.
+
+Field	Type	Description
+type
+Required	"MENTION"	Decoration type.
+Must be MENTION.
+mentionData	MentionData	Anchor details.
+MentionData
+Used in: MentionDecoration
+
+Field	Type	Description
+name	string
+Display name of the mentioned user.
+slug	string
+Username of the mentioned user. This is th text that appears after the "@".
+id	string
+ID of the mentioned user.
+LinkDecoration
+Used in: Decoration
+
+Note: This type requires the `link` plugin to be enabled.
+
+Makes clickable text a different color. The link navigates to another webpage or resource.
+Note: This decoration requires the link plugin to be enabled.
+
+Field	Type	Description
+type
+Required	"LINK"	Decoration type.
+Must be LINK.
+linkData	LinkData	Link details.
+LinkData
+Used in: LinkDecoration
+
+Field	Type	Description
+link	Link	Link object.
+ColorDecoration
+Used in: Decoration
+
+Note: This type requires the `textColor`, `textHighlight` plugins to be enabled.
+
+Styles text using background and text colors.
+Note: This decoration requires the colorDecoration plugin to be enabled.
+
+Field	Type	Description
+type
+Required	"COLOR"	Decoration type.
+Value: COLOR
+colorData	ColorData	Color details.
+ColorData
+Used in: ColorDecoration
+
+Field	Type	Description
+background	string
+Background color as a hexadecimal value.
+foreground	string
+Text color as a hexadecimal value.
+FontSizeDecoration
+Used in: Decoration
+
+Text font size.
+
+Field	Type	Description
+type
+Required	"FONT_SIZE"	Decoration type.
+Must be FONT_SIZE.
+fontSizeData	FontSizeData	Font size details.
+FontSizeData
+Used in: FontSizeDecoration
+
+Field	Type	Description
+unit	enum: "PX", "EM"	Font size units.
+value	float32
+Font size value.
+Common Types
+Nodes and decorations that are commonly used in other types.
+
+PluginContainerData
+Used in: VideoData, DividerData, FileData, GalleryData, GIFData, HTMLData, ImageData, LinkPreviewData, PollData, ButtonData, CollapsibleListData, TableData, EmbedData, AudioData
+
+Field	Type	Description
+width	PluginContainerData_Width	Node display width.
+alignment	enum: "CENTER", "LEFT", "RIGHT"	Node alignment in its container.
+spoiler	PluginContainerData_Spoiler	Spoiler cover settings.
+height	PluginContainerData_Height	Node display height.
+textWrap	boolean
+Whether the text should wrap around the node when it's displayed. If textWrap is false, the node fills the width of its container.
+Default: true for all node types except DIVIDER.
+PluginContainerData_Spoiler
+Used in: PluginContainerData
+
+Field	Type	Description
+enabled	boolean
+Whether the spoiler cover is enabled.
+Default: false
+description	string
+Text displayed on the spoiler cover.
+buttonText	string
+Text that appears on the button that removes the spoiler cover.
+PluginContainerData_Width
+Used in: PluginContainerData
+
+Node display width.
+
+You must provide at least one of the following fields: size, custom.
+Field	Type	Description
+size
+At least one of	enum: "CONTENT", "SMALL", "ORIGINAL", "FULL_WIDTH"	Width of a node in a container. Supported values:
+- CONTENT: Width of the container matches the content width.
+- SMALL: Small width.
+- ORIGINAL: Width of the container matches the original image width. Note: This value is only applicable for imageData containers.
+FULL_WIDTH: Image container takes up the full width of the screen. Note: This value is only applicable for imageData containers.
+custom
+At least one of	string
+A custom width value in pixels.
+PluginContainerData_Height
+Used in: PluginContainerData
+
+Field	Type	Description
+custom	string
+Node display height in pixels.
+NodeStyle
+Used in: TextNodeStyle, ParagraphNode, HeadingNode, BlockquoteNode, CodeBlockNode, CaptionNode
+
+Note: This type requires the `lineSpacing` plugin to be enabled.
+
+Field	Type	Description
+paddingTop	string
+The top padding value in pixels.
+paddingBottom	string
+The bottom padding value in pixels.
+backgroundColor
+Deprecated	string
+TextStyle
+Used in: ParagraphData, HeadingData, CodeBlockData, CaptionData
+
+Field	Type	Description
+textAlignment	enum: "AUTO", "LEFT", "RIGHT", "CENTER", "JUSTIFY"	Text alignment. Supported values:
+- AUTO: Text aligns itself automatically.
+- LEFT: Text is aligned to the left.
+- RIGHT: Text is aligned to the right.
+- CENTER: Text is centered.
+- JUSTIFY: Text is justified to both margins.
+Default: AUTO.
+lineHeight	string
+Vertical spacing between lines of text in an element.
+Link
+Used in: ImageData, LinkPreviewData, ButtonData, LinkData, GalleryData_Item_Image
+
+Link object.
+
+You must provide exactly one of the following fields: url, anchor.
+Field	Type	Description
+url
+Exactly one of	string
+Absolute URL to link to.
+anchor
+Exactly one of	string
+Target Node ID to link to.
+target	enum: "SELF", "BLANK", "PARENT", "TOP"	The HTML target attribute value for the link. This property defines where the link opens.
+Supported values:
+SELF - Opens the link in the same frame.
+BLANK - Opens the link in a new browser tab or window.
+PARENT - Opens the link in the parent frame.
+TOP - Opens the link in the full body of the link's browser tab or window.
+Default: SELF
+rel	Link_Rel	Relationship between the current document and the linked document.
+Link_Rel
+Used in: Link
+
+Field	Type	Description
+nofollow	boolean
+Indicates to search engine crawlers not to follow the link.
+Default: false
+sponsored	boolean
+Indicates to search engine crawlers that the link is a paid placement such as sponsored content or an advertisement.
+Default: false
+ugc	boolean
+Indicates that this link is user-generated content and isn't necessarily trusted or endorsed by the page author.
+Default: false
+noreferrer	boolean
+Indicates that this link protects referral information from being passed to the target website.
+FileSource
+Used in: FileData, Media
+
+File source object.
+
+You must provide exactly one of the following fields: url, id.
+Field	Type	Description
+url
+Exactly one of	string
+File source URL.
+id
+Exactly one of	string
+ID that's resolved to a URL by a resolver function.
+private	boolean
+Whether the file's source is private. Learn more about private files in Wix (SDK
+Media
+Used in: VideoData, ImageData, AudioData, PollData_Poll, AppEmbedDataProduct, AppEmbedDataEvent, AppEmbedDataBooking, GalleryData_Item_Image, GalleryData_Item_Video, PollData_Poll_Option, PollData_Background_ImageVariant
+
+Field	Type	Description
+src
+Required	FileSource	File source.
+width	int32
+Media width in pixels.
+height	int32
+Media height in pixels.
+duration	float64
+Media duration in seconds. Only relevant for audio and video files.
+Metadata
+Metadata contains information about the Ricos document itself, such as its version.
+
+Metadata
+Used in: RicosDocument
+
+Field	Type	Description
+version	int32
+Ricos document version.
+id
+Deprecated	any	
+createdTimestamp
+Deprecated	any	
+updatedTimestamp
+Deprecated	any	
+Document Styles
+Decorations included in DocumentStyle are applied throughout the Ricos document for the specified node types.
+
+DocumentStyle
+Used in: RicosDocument
+
+Sets a default styling for specific node types throughout the entire Ricos Document. For example, you can set the text color for all Heading 1 nodes. You can override the styling of specific Text nodes separately using decorations.
+
+Field	Type	Description
+headerOne	TextNodeStyle	Style for the H1 nodes.
+headerTwo	TextNodeStyle	Style for the H2 nodes.
+headerThree	TextNodeStyle	Style for the H3 nodes.
+headerFour	TextNodeStyle	Style for the H4 nodes.
+headerFive	TextNodeStyle	Style for the H5 nodes.
+headerSix	TextNodeStyle	Style for the H6 nodes.
+paragraph	TextNodeStyle	Style for the paragraph nodes.
+blockquote	TextNodeStyle	Style for the block quote nodes.
+codeBlock	TextNodeStyle	Style for the codeblock nodes.
+TextNodeStyle
+Used in: DocumentStyle
+
+Field	Type	Description
+decorations	Array <Decoration>	Text node decorations.
+nodeStyle	NodeStyle	Node style, such as padding.
+Note: This node requires the lineSpacing plugin to be enabled.
+lineHeight	string
+Text line height.
+Did this help?
+
+Yes
+
+No
