@@ -1,72 +1,82 @@
-#!/usr/bin/env python3
-"""
-Script para testar o cliente Gemini.
-"""
-
-import os
 import sys
-from pathlib import Path
+import pytest
+import types
+import pathlib
 
-# Adiciona o diretório 'services' ao path para importar o módulo
-sys.path.insert(0, str(Path(__file__).parent / "services"))
+from types import SimpleNamespace
 
-from gemini_client import GeminiClient
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
+# --- dummy google-genai modules to avoid external dependency ---
 
-def test_text_only():
-    """Testa a geração de conteúdo com texto apenas."""
-    print("--- Teste 1: Texto apenas ---")
-    client = GeminiClient()
-    try:
-        response = client.generate(["Escreva uma frase criativa sobre inteligência artificial."])
-        print("Resposta:", response["text"])
-        print("Sucesso!\n")
-    except Exception as e:
-        print(f"Erro: {e}\n")
+class DummyPart:
+    @staticmethod
+    def from_bytes(data, mime_type):
+        return {"data": data, "mime_type": mime_type}
 
+    @staticmethod
+    def from_uri(file_uri, mime_type):
+        return {"uri": file_uri, "mime_type": mime_type}
 
-def test_text_and_image():
-    """Testa a geração de conteúdo com texto e imagem."""
-    print("--- Teste 2: Texto e Imagem ---")
-    # Cria uma imagem de teste simples (quadrado vermelho)
-    from PIL import Image
-    import io
-    import base64
+class DummyModels:
+    def __init__(self):
+        self.called_with = None
 
-    # Gera uma imagem simples em memória
-    img = Image.new('RGB', (100, 100), color = 'red')
-    img_byte_arr = io.BytesIO()
-    img.save(img_byte_arr, format='PNG')
-    img_byte_arr = img_byte_arr.getvalue()
+    def generate_content(self, model, contents):
+        self.called_with = (model, contents)
+        return SimpleNamespace(text="dummy-text")
 
-    client = GeminiClient()
-    try:
-        response = client.generate([
-            "O que tem nesta imagem?",
-            img_byte_arr,
-        ])
-        print("Resposta:", response["text"])
-        print("Sucesso!\n")
-    except Exception as e:
-        print(f"Erro: {e}\n")
+    def generate_content_stream(self, model, contents):
+        self.called_with = (model, contents)
+        yield SimpleNamespace(text="chunk1")
+        yield SimpleNamespace(text="chunk2")
 
+class DummyClient:
+    def __init__(self, api_key, http_options=None):
+        self.api_key = api_key
+        self.http_options = http_options
+        self.models = DummyModels()
 
-def test_streaming():
-    """Testa a geração de conteúdo em streaming."""
-    print("--- Teste 3: Streaming ---")
-    client = GeminiClient()
-    try:
-        print("Gerando conteúdo em streaming...")
-        for chunk in client.generate_stream(["Conte uma história curta sobre um robô aprendendo a cozinhar."]):
-            print(chunk, end="", flush=True)
-        print("\nStreaming finalizado com sucesso!\n")
-    except Exception as e:
-        print(f"Erro: {e}\n")
+# Monta estrutura de módulos simulados
+google_module = types.ModuleType("google")
+google_genai_module = types.ModuleType("google.genai")
+google_genai_types_module = types.ModuleType("google.genai.types")
+
+google_genai_types_module.Part = DummyPart
+google_genai_module.Client = DummyClient
+google_genai_module.types = google_genai_types_module
+google_module.genai = google_genai_module
+
+sys.modules["google"] = google_module
+sys.modules["google.genai"] = google_genai_module
+sys.modules["google.genai.types"] = google_genai_types_module
+
+from services.agente_ia.gemini_client import GeminiClient
 
 
-if __name__ == "__main__":
-    print("Iniciando testes do GeminiClient...\n")
-    test_text_only()
-    test_text_and_image()
-    test_streaming()
-    print("Todos os testes concluídos.")
+def test_generate_builds_contents_and_returns_text():
+    client = GeminiClient(api_key="test-key")
+    data = b"binary-data"
+    result = client.generate(["hello", data])
+
+    assert result["text"] == "dummy-text"
+    model_used, contents_used = client.client.models.called_with
+    assert model_used == client.model
+    assert contents_used[0] == "hello"
+    assert contents_used[1]["mime_type"] == "image/jpeg"
+
+
+def test_generate_stream_yields_chunks_in_order():
+    client = GeminiClient(api_key="test-key")
+    chunks = list(client.generate_stream(["hi"]))
+
+    assert chunks == ["chunk1", "chunk2"]
+    model_used, contents_used = client.client.models.called_with
+    assert model_used == client.model
+    assert contents_used == ["hi"]
+
+
+def test_build_contents_unsupported_type_raises():
+    client = GeminiClient(api_key="test-key")
+    with pytest.raises(TypeError):
+        client._build_contents([123])
