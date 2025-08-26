@@ -80,6 +80,8 @@ O script irá processar os arquivos de exportação do WordPress (`.xml` e `.csv
 
 Um arquivo `reports/redirect_map.csv` será gerado com o mapeamento das URLs antigas do WordPress para as novas URLs do Wix, útil para configurar redirecionamentos 301.
 
+=======
+
 ## Scripts
 
 - `scripts/update_wix_post.js`: Atualiza um post do Wix Blog via API REST.
