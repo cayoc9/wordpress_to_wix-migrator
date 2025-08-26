@@ -27,7 +27,7 @@ def extract_posts_from_csv(file_path):
 
     Esta função lê um arquivo CSV exportado do WordPress e converte seus dados em um
     formato padronizado para migração. Trata corretamente campos de taxonomia, URLs de
-    imagens e outros metadados.
+    imagens e outros metadados necessários para a migração.
 
     Args:
         file_path (str): O caminho para o arquivo CSV.
@@ -60,26 +60,12 @@ def extract_posts_from_csv(file_path):
                     'ContentHTML': row.get('Content'),
                     'Excerpt': row.get('Excerpt'),
                     'Date': row.get('Date'),
-                    'Post Type': row.get('Post Type'),
-                    'Permalink': row.get('Permalink'),
                     'FeaturedImageUrl': featured_image_url,
                     'Categories': _parse_taxonomy_field(row.get('Categorias', '')),
                     'Tags': _parse_taxonomy_field(row.get('Tags', '')),
-                    'Status': row.get('Status'),
                     'Author ID': row.get('Author ID'),
-                    'Author Username': row.get('Author Username'),
                     'Author Email': row.get('Author Email'),
-                    'Author First Name': row.get('Author First Name'),
-                    'Author Last Name': row.get('Author Last Name'),
-                    'Slug': row.get('Slug'),
-                    'Format': row.get('Format'),
-                    'Template': row.get('Template'),
-                    'Parent': row.get('Parent'),
-                    'Parent Slug': row.get('Parent Slug'),
-                    'Order': row.get('Order'),
-                    'Comment Status': row.get('Comment Status'),
-                    'Ping Status': row.get('Ping Status'),
-                    'Post Modified Date': row.get('Post Modified Date')
+                    'Slug': row.get('Slug')
                 }
                 posts.append(post)
             except Exception as e:
@@ -136,11 +122,9 @@ def extract_posts_from_xml(file_path):
             post = {
                 'ID': post_id_element.text if post_id_element is not None else None,
                 'Title': title_element.text if title_element is not None else None,
-                'Content': content_element.text if content_element is not None else None,
+                'ContentHTML': content_element.text if content_element is not None else None,
                 'Date': date_element.text if date_element is not None else None,
-                'Permalink': permalink,
-                'Slug': slug, # Adiciona o slug ao dicionário do post
-                'Status': status_element.text if status_element is not None else None,
+                'Slug': slug,
                 'Categories': categories,
                 'Tags': tags,
             }
