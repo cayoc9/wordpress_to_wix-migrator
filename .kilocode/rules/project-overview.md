@@ -44,3 +44,4 @@ Este arquivo define as regras específicas para o projeto de migração do WordP
 - Respeite limites de taxa da API Wix
 - Execute dry-run antes de publicar conteúdo
 - Utilize `migration.dry_run` e flags nos scripts para testes
+- Use python3 quando for rodar algum script python

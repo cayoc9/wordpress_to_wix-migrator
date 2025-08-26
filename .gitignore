@@ -44,6 +44,10 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+**/.cache
+.cache-dir
+**/cache
+**/__pycache__
 nosetests.xml
 coverage.xml
 *.cover
