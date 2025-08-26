@@ -139,7 +139,7 @@ cython_debug/
 /reports/*
 
 # Ignore downloaded data if any
-/data/*
+#/data/*
 
 
 
@@ -149,7 +149,7 @@ temp/*
 
 /plan_refact.md
 /relatorio_analise.md
-/docs/*
+#/docs/*
 data/posts/*
 /config/*
 

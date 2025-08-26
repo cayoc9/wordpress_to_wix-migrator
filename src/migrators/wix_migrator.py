@@ -123,48 +123,104 @@ def with_retries(fn: Callable[[], requests.Response], *, max_attempts: int = 5, 
 # Member helpers
 ###############################################################################
 
-def list_members(cfg: Dict[str, str]) -> List[Dict[str, Any]]:
+def get_member_by_email(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
     """
-    Lists all members for the Wix site.
+    Retrieves a member by their email address.
 
-    :param cfg: Wix configuration dictionary with an ``access_token``.
-    :return: A list of member objects.
+    :param cfg: Wix configuration dictionary with an ``access_token`` and ``base_url``.
+    :param email: The email address of the member to retrieve.
+    :return: The member object if found, or ``None`` if not found or on error.
     """
     _limiter.wait()
     def do_request() -> requests.Response:
         return requests.get(
-            f"{cfg['base_url']}/members/v1/members",
+            f"{cfg['base_url']}/members/v1/members?query={{'filter': {{'loginEmail': {{'$eq': '{email}'}}}}}}",
             headers=wix_headers(cfg),
         )
     try:
         resp = with_retries(do_request)
-        return resp.json().get("members", [])
+        members = resp.json().get("members", [])
+        if members:
+            return members[0]  # Assuming email is unique, return the first match
+        return None
     except requests.HTTPError as e:
-        print(f"Failed to list members: {e.response.text}")
-        return []
+        print(f"Failed to get member by email {email}: {e.response.text}")
+        return None
 
 def create_member(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
     """
-    Creates a new member on the Wix site.
+    Creates a new member on the Wix site. If the member already exists,
+    it retrieves and returns the existing member.
 
-    :param cfg: Wix configuration dictionary with an ``access_token``.
+    :param cfg: Wix configuration dictionary with an ``access_token`` and ``base_url``.
     :param email: The email address for the new member.
-    :return: The new member object, or ``None`` on failure.
+    :return: The new or existing member object, or ``None`` on unrecoverable failure.
     """
     _limiter.wait()
     def do_request() -> requests.Response:
         return requests.post(
             f"{cfg['base_url']}/members/v1/members",
             headers={**wix_headers(cfg), "Content-Type": "application/json"},
-            json={"member": {"loginEmail": email}},
+            json={"member": {"loginEmail": email, "contact": {"firstName": "Default", "lastName": "Author"}}},
         )
     try:
         resp = with_retries(do_request)
         return resp.json().get("member")
     except requests.HTTPError as e:
+        if e.response.status_code == 409:  # Conflict, often indicates ALREADY_EXISTS
+            error_data = e.response.json()
+            if "details" in error_data and any("ALREADY_EXISTS" in detail.get("message", "") for detail in error_data.get("details", [])):
+                print(f"Member with email {email} already exists. Retrieving existing member.")
+                return get_member_by_email(cfg, email)
         print(f"Failed to create member: {e.response.text}")
-        # Re-raise the exception so it can be handled upstream
-        raise
+        return None
+
+def get_or_create_author_id(cfg: Dict[str, str], author_email: str, default_author_email: str) -> Optional[str]:
+    """
+    Gets the member ID for a given author email. If the author does not exist,
+    attempts to create them. Handles ALREADY_EXISTS errors by retrieving the
+    existing member. If all attempts fail, falls back to a default author's ID.
+
+    :param cfg: Wix configuration dictionary.
+    :param author_email: The email of the author to find or create.
+    :param default_author_email: The email of the default author to use as a fallback.
+    :return: The member ID of the author, or the default author, or None if fallback fails.
+    """
+    # Try to find the author first
+    member = get_member_by_email(cfg, author_email)
+    if member:
+        print(f"Found existing author {author_email} with ID: {member.get('id')}")
+        return member.get("id")
+
+    # If not found, try to create
+    print(f"Author {author_email} not found. Attempting to create new member.")
+    try:
+        new_member = create_member(cfg, author_email)
+        if new_member:
+            print(f"Successfully created author {author_email} with ID: {new_member.get('id')}")
+            return new_member.get("id")
+    except Exception as e:
+        print(f"Error creating member {author_email}: {e}")
+
+    # Fallback to default author
+    print(f"Could not find or create author {author_email}. Falling back to default author {default_author_email}.")
+    default_member = get_member_by_email(cfg, default_author_email)
+    if default_member:
+        print(f"Using default author {default_author_email} with ID: {default_member.get('id')}")
+        return default_member.get("id")
+    else:
+        print(f"Default author {default_author_email} not found. Attempting to create default author.")
+        try:
+            created_default_member = create_member(cfg, default_author_email)
+            if created_default_member:
+                print(f"Successfully created default author {default_author_email} with ID: {created_default_member.get('id')}")
+                return created_default_member.get("id")
+            else:
+                print(f"Failed to create default author {default_author_email}. No author ID available.")
+                return None
+        except Exception as e:
+            print(f"Error creating default author {default_author_email}: {e}. No author ID available.")
+            return None
 
 
 ###############################################################################

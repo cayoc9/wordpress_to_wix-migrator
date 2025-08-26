@@ -26,8 +26,7 @@ from src.migrators.wix_migrator import (
     get_or_create_terms,
     create_draft_post,
     publish_post,
-    list_members,
-    create_member,
+    get_or_create_author_id,
 )
 from src.utils.errors import report_error, report_ok, ERRORS
 from src.utils.redirects import generate_redirects_csv
@@ -142,86 +141,33 @@ class WordPressMigrationTool:
 
             author_email = post.get("Author Email")
             member_id = None
+            default_author_email = "default-author@example.com" # Define a default email
 
-            if author_email:
-                if author_email in self.email_to_member_id_map:
-                    member_id = self.email_to_member_id_map[author_email]
-                elif not dry_run:
-                    self.log_message(f"Creating new member for email: {author_email}", level="INFO")
-                    try:
-                        new_member = create_member(self.config["wix"], author_email)
-                        if new_member:
-                            member_id = new_member["id"]
-                            self.email_to_member_id_map[author_email] = member_id
-                            # Save the updated map
-                            os.makedirs(os.path.dirname(self.member_map_file), exist_ok=True)
-                            with open(self.member_map_file, "w", encoding="utf-8") as f:
-                                json.dump(self.email_to_member_id_map, f)
-                            self.log_message(f"Successfully created member {new_member.get('profile', {}).get('nickname', author_email)} for email: {author_email}", level="INFO")
-                        else:
-                            # This path is for other potential issues with create_member that don't raise HTTPError
-                            # If ALREADY_EXISTS is handled by create_member returning None, we should log it.
-                            # However, based on the error message, it seems to raise an exception.
-                            # Let's keep this for robustness.
-                            self.log_message(f"Failed to create member for email: {author_email} (create_member returned None). This should not happen with the new error handling. Skipping post.", level="ERROR")
-                            report_error("MEMBER_CREATION_FAILED", post)
-                            continue
-                    except requests.exceptions.HTTPError as e:
-                         if e.response is not None and e.response.status_code == 409:
-                            # Handle 409 Conflict (e.g., member already exists)
-                            self.log_message(f"Member with email {author_email} already exists (409).", level="INFO")
-                            # Check if the member ID is already in the map
-                            if author_email in self.email_to_member_id_map:
-                                member_id = self.email_to_member_id_map[author_email]
-                                self.log_message(f"Using existing member ID for {author_email} from map.", level="INFO")
-                            else:
-                                self.log_message(f"Member ID for {author_email} not found in map. Skipping post.", level="WARNING")
-                                report_error("MEMBER_ALREADY_EXISTS_BUT_NOT_IN_MAP", post)
-                                continue
-                         else:
-                            # Re-raise other HTTP errors
-                            self.log_message(f"Failed to create member for email: {author_email}. Error: {e}. Skipping post.", level="ERROR")
-                            report_error("MEMBER_CREATION_FAILED", post)
-                            continue
-                    except Exception as e: # Catch other potential errors from create_member
-                         self.log_message(f"Unexpected error creating member for email: {author_email}. Error: {e}. Skipping post.", level="ERROR")
-                         report_error("MEMBER_CREATION_FAILED", post)
-                         continue
-            else: # No author email in post
-                if self.default_member_id:
-                    member_id = self.default_member_id
-                elif not dry_run:
-                    self.log_message("No author email for post. Creating a default author.", level="INFO")
-                    default_email = "default-author@example.com"
-                    try:
-                        new_member = create_member(self.config["wix"], default_email)
-                        if new_member:
-                            self.default_member_id = new_member["id"]
-                            member_id = self.default_member_id
-                            self.email_to_member_id_map[default_email] = member_id
-                            # Save the updated map
-                            os.makedirs(os.path.dirname(self.member_map_file), exist_ok=True)
-                            with open(self.member_map_file, "w", encoding="utf-8") as f:
-                                json.dump(self.email_to_member_id_map, f)
-                            self.log_message(f"Successfully created default member {new_member.get('profile', {}).get('nickname', default_email)}", level="INFO")
-                        else:
-                            self.log_message("Failed to create default member. Skipping post.", level="ERROR")
-                            report_error("MEMBER_CREATION_FAILED", post)
-                            continue
-                    except requests.HTTPError as e:
-                        if e.response.status_code == 409: # ALREADY_EXISTS
-                            self.log_message(f"Default member with email {default_email} already exists. Cannot retrieve ID. Skipping post.", level="WARNING")
-                            report_error("MEMBER_ALREADY_EXISTS", post)
-                            continue
-                        else:
-                            self.log_message(f"Failed to create default member. Error: {e}. Skipping post.", level="ERROR")
-                            report_error("MEMBER_CREATION_FAILED", post)
-                            continue
-
-            if not member_id and not dry_run:
-                self.log_message(f"Could not find or create a member for post '{slug}'. Skipping post.", level="WARNING")
-                report_error("MISSING_MEMBER_ID", post)
-                continue
+            if not dry_run:
+                # Use the new get_or_create_author_id function
+                member_id = get_or_create_author_id(
+                    self.config["wix"],
+                    author_email if author_email else default_author_email, # Use post author email or default
+                    default_author_email
+                )
+                if member_id:
+                    # Update the map for caching within this migration run
+                    if author_email:
+                        self.email_to_member_id_map[author_email] = member_id
+                    else:
+                        self.email_to_member_id_map[default_author_email] = member_id
+                    # Save the updated map to file
+                    os.makedirs(os.path.dirname(self.member_map_file), exist_ok=True)
+                    with open(self.member_map_file, "w", encoding="utf-8") as f:
+                        json.dump(self.email_to_member_id_map, f)
+                else:
+                    self.log_message(f"Could not find or create a member for post '{slug}'. Skipping post.", level="WARNING")
+                    report_error("MISSING_MEMBER_ID", post)
+                    continue
+            else: # dry_run is True
+                self.log_message(f"Dry-run: would determine member ID for {author_email if author_email else 'default author'}", level="INFO")
+                # In dry-run, we don't actually get a member_id from API, so we can set a placeholder
+                member_id = "dry-run-member-id"
 
             try:
                 # Upload cover image
