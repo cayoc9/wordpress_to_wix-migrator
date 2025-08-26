@@ -1,256 +1,144 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
-"""
-Lista todos os posts PUBLICADOS do Wix Blog e salva metadados em JSON.
-
-Uso:
-  python scripts/list_wix_published_posts.py \
-    [--out data/published_posts.json] \
-    [--limit 10000] \
-    [--all] \
-    [--details]
-
-Autenticação:
-  - Lê primeiro de variáveis de ambiente: WIX_API_KEY (ou WIX_ACCESS_TOKEN), WIX_SITE_ID
-  - Fallback para config/migration_config.json em: wix.api_key, wix.access_token, wix.site_id
-
-Notas:
-  - Com --details, enriquece cada item com GET /blog/v3/posts/{id}?fieldsets=URL,SEO (e mantém demais campos).
-"""
-
-from __future__ import annotations
-
-import argparse
-import json
 import os
+import json
+import time
+import argparse
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
+from typing import List, Dict, Any
 
 import requests
 
-BASE_URL = "https://www.wixapis.com/blog/v3"
+
+BASE_URL = "https://www.wixapis.com/blog/v3/posts"
+PAGE_SIZE = 100
+MAX_RETRIES = 5
+RETRY_BASE_DELAY = 1.5  # segundos (exponencial)
 
 
-def die(msg: str, code: int = 1) -> None:
-    print(msg, file=sys.stderr)
-    sys.exit(code)
+def load_config() -> Dict[str, Any]:
+    """Carrega o config/migration_config.json."""
+    cfg_path = os.path.join(os.path.dirname(__file__), "..", "config", "migration_config.json")
+    with open(cfg_path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-def load_wix_config() -> Dict[str, Any]:
-    cfg_path = Path(__file__).parent.parent / "config" / "migration_config.json"
-    if cfg_path.exists():
-        try:
-            return json.loads(cfg_path.read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-    return {}
 
-def resolve_auth() -> tuple[Optional[str], Optional[str]]:
-    # Tenta carregar o token do wix_token.json primeiro
-    token_path = Path(__file__).parent.parent / "wix_token.json"
-    access_token = None
-    if token_path.exists():
-        try:
-            token_data = json.loads(token_path.read_text(encoding="utf-8"))
-            access_token = token_data.get("access_token")
-        except Exception:
-            pass
+def backoff_sleep(attempt: int) -> None:
 
-    cfg = load_wix_config()
-    wix_cfg = cfg.get("wix", {}) if isinstance(cfg, dict) else {}
+    delay = RETRY_BASE_DELAY * (2 ** (attempt - 1))
+    time.sleep(delay)
 
-    # Prioridade: Token do wix_token.json > WIX_API_KEY > wix.api_key > WIX_ACCESS_TOKEN > wix.access_token
-    authorization = (
-        access_token
-        or os.getenv("WIX_API_KEY")
-        or wix_cfg.get("api_key")
-        or os.getenv("WIX_ACCESS_TOKEN")
-        or wix_cfg.get("access_token")
-    )
-    site_id = os.getenv("WIX_SITE_ID") or wix_cfg.get("site_id")
 
-    if not authorization:
-        die(
-            "Token/API Key não encontrado. Gere um token com 'generate_wix_token.py' ou configure WIX_API_KEY/WIX_ACCESS_TOKEN."
-        )
-    return authorization, site_id
-
-def wix_request(method: str, path: str, *, json_body: Dict[str, Any] | None = None) -> Dict[str, Any] | None:
-    authorization, site_id = resolve_auth()
-    url = f"{BASE_URL}{path}"
+def fetch_page(token: str, offset: int) -> Dict[str, Any]:
+    """Busca uma página de posts com limite 100 e offset informado, com retry simples em 429/5xx."""
     headers = {
-        "Authorization": authorization,
         "Content-Type": "application/json",
+        "Authorization": token,  # Ex.: "Bearer <token>" ou token direto, conforme config
     }
-    if site_id:
-        headers["wix-site-id"] = site_id
-    resp = requests.request(method, url, headers=headers, json=json_body, timeout=30)
-    if not resp.ok:
-        content_type = resp.headers.get("Content-Type", "")
-        if "application/json" in content_type:
+    params = {
+        "paging.limit": PAGE_SIZE,
+        "paging.offset": offset,
+    }
+
+    attempt = 0
+    while True:
+        attempt += 1
+        resp = requests.get(BASE_URL, headers=headers, params=params, timeout=30)
+        if resp.status_code == 200:
             try:
-                data = resp.json()
-            except Exception:
-                data = None
-            msg = data.get("message") if isinstance(data, dict) else resp.text
-            details = data.get("details") if isinstance(data, dict) else None
-            err = f"Falha {resp.status_code} em {method} {path}: {msg}"
-            if details:
-                err += f"\nDetalhes: {json.dumps(details, ensure_ascii=False)}"
-            die(err)
+                return resp.json()
+            except json.JSONDecodeError:
+                raise RuntimeError("A resposta da API não é um JSON válido.")
+        elif resp.status_code in (429, 500, 502, 503, 504) and attempt < MAX_RETRIES:
+            backoff_sleep(attempt)
+            continue
         else:
-            die(f"Falha {resp.status_code} em {method} {path}:\n{resp.text}")
-    try:
-        return resp.json()
-    except Exception:
-        return None
+            try:
+                detail = resp.json()
+            except Exception:
+                detail = resp.text
+            raise RuntimeError(
+                f"Falha ao buscar posts (status {resp.status_code}). Detalhes: {detail}"
+            )
 
-def query_published_posts(limit_total: int = 10000, fetch_all: bool = False, *, only_ids: bool = False) -> List[Dict[str, Any]]:
 
-    posts: List[Dict[str, Any]] = []
-    fetched = 0
-    page_size = 50
+def fetch_all_posts(token: str, max_pages: int | None = None) -> List[Dict[str, Any]]:
+    """Pagina até o fim (ou até max_pages) e retorna a lista completa de objetos 'post'."""
+    all_posts: List[Dict[str, Any]] = []
     offset = 0
+    page_count = 0
 
     while True:
-        body = {
-            "query": {
-                "filter": {"status": "PUBLISHED"},
-                "sort": [{"fieldName": "lastPublishedDate", "order": "DESC"}],
-                "paging": {"limit": page_size, "offset": offset},
-            }
-        }
-        # Se estiver buscando apenas IDs, usar fieldsets mínimos para otimização
-        if only_ids:
-            body["query"]["fieldsets"] = ["ID"]
-        data = wix_request("POST", "/posts/query", json_body=body)
-        if data is None:
+        page_count += 1
+        result = fetch_page(token, offset)
+
+        posts = result.get("posts", [])
+        all_posts.extend(posts)
+
+        if len(posts) < PAGE_SIZE:
             break
 
-        page_posts = data.get("posts") or []
-        posts.extend(page_posts)
-        fetched += len(page_posts)
 
-        if not page_posts:
+        offset += PAGE_SIZE
+
+        if max_pages and page_count >= max_pages:
+
             break
 
-        offset += page_size
+    return all_posts
 
-        if (not fetch_all) and fetched >= limit_total:
-            break
 
-    return posts
+def ensure_dir(path: str) -> None:
 
-def pick_metadata(p: Dict[str, Any]) -> Dict[str, Any]:
-    keys = [
-        "id",
-        "title",
-        "slug",
-        "status",
-        "firstPublishedDate",
-        "lastPublishedDate",
-        "contentId",
-        "minutesToRead",
-        "categoryIds",
-        "tagIds",
-        "language",
-        "coverMedia",
-    ]
-    out = {k: p.get(k) for k in keys}
-    return out
+    os.makedirs(os.path.dirname(path), exist_ok=True)
 
-def enrich_with_details(posts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    enriched: List[Dict[str, Any]] = []
-    for p in posts:
-        pid = p.get("id")
-        if not pid:
-            enriched.append(p)
-            continue
-        # Trazer URL e SEO completos do item
-        details = wix_request("GET", f"/posts/{pid}?fieldsets=URL,SEO")
-        detail_post = details.get("post") if isinstance(details, dict) else None
-        if isinstance(detail_post, dict):
-            merged = dict(p)
-            # Mesclar sem perder campos existentes
-            for k, v in detail_post.items():
-                if k not in merged or merged[k] in (None, []) or (isinstance(merged[k], dict) and not merged[k]):
 
-                    merged[k] = v
-            enriched.append(merged)
-        else:
-            enriched.append(p)
-    return enriched
+def main():
 
-def main(argv: list[str]) -> int:
-    ap = argparse.ArgumentParser(description="Lista posts publicados do Wix Blog e salva em JSON")
-    ap.add_argument("--out", default="data/published_posts.json", help="Arquivo de saída JSON")
-    ap.add_argument("--limit", type=int, default=10000, help="Limite máximo preliminar (use 60 p/ operação rápida)")
-    ap.add_argument("--all", action="store_true", help="Ignorar limite e buscar todos (até esgotar a paginação)")
-    ap.add_argument("--details", action="store_true", help="Enriquecer cada post com URL/SEO via GET por ID")
-    ap.add_argument("--only-ids", action="store_true", help="Retorna apenas IDs de posts publicados, mais rápido")
-    args = ap.parse_args(argv)
+    parser = argparse.ArgumentParser(description="Listar posts publicados do Wix usando config/migration_config.json.")
+    parser.add_argument("--out-ids", default="data/wix_post_ids.json", help="Arquivo de saída com apenas IDs.")
+    parser.add_argument("--out-posts", default="data/wix_posts_full.json", help="Arquivo de saída com posts completos.")
+    parser.add_argument("--no-full", action="store_true", help="Não salvar o arquivo com posts completos.")
+    parser.add_argument("--max-pages", type=int, default=None, help="(Opcional) Limite de páginas para debug.")
+    args = parser.parse_args()
 
-    # Ajuste automático de limite para operação rápida quando --only-ids
-    if args.only_ids and "--limit" not in argv:
-        args.limit = 60
+    try:
+        config = load_config()
+    except Exception as e:
+        print(f"Erro ao carregar config/migration_config.json: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    print("➡️  Consultando posts publicados no Wix Blog...")
-    posts = query_published_posts(limit_total=args.limit, fetch_all=args.all, only_ids=args.only_ids)
+    token = (config.get("wix") or {}).get("access_token")
+    if not token:
+        print("Token não encontrado em wix.access_token no config/migration_config.json", file=sys.stderr)
+        sys.exit(1)
 
-    # Garantir que não ultrapasse o limite solicitado (pode vir em blocos de 100)
-    if not args.all and len(posts) > args.limit:
-        posts = posts[:args.limit]
+    print("Buscando posts...")
+    posts = fetch_all_posts(token=token, max_pages=args.max_pages)
 
-    # Atalho: quando só IDs, salvar e encerrar
-    if args.only_ids:
-        ids = [p.get("id") for p in posts if p.get("id")]
-        output = {
-            "fetchedAt": datetime.now(timezone.utc).isoformat(),
-            "total": len(ids),
-            "ids": ids,
-        }
-        out_path = Path(args.out)
-        if str(out_path) == "data/published_posts.json":
-            out_path = Path("data/published_post_ids.json")
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"✔️  {len(ids)} IDs salvos em: {out_path}")
-        return 0
+    if not posts:
+        print("Nenhum post retornado pela API. Verifique permissões/escopos e se há posts publicados.")
+        sys.exit(0)
 
-    if args.details:
-        print("➡️  Enriquecendo com detalhes (URL/SEO)...")
-        posts = enrich_with_details(posts)
+    # Mantém apenas publicados quando possível
 
-    # Mantém metadados principais no topo, mas preserva demais campos vindo da API
-    meta = []
-    for p in posts:
-        m = pick_metadata(p)
-        # Inclui também campos adicionais (URL/SEO) se presentes
-        if "seo" in p:
-            m["seo"] = p["seo"]
-        if "url" in p:
-            m["url"] = p["url"]
-        # Copia demais campos não listados para não perder informações
-        for k, v in p.items():
-            if k not in m:
-                m[k] = v
-        meta.append(m)
+    published = [p for p in posts if p.get("status") == "PUBLISHED" or p.get("published") is True] or posts
 
-    output = {
-        "fetchedAt": datetime.now(timezone.utc).isoformat(),
-        "total": len(meta),
-        "posts": meta,
-    }
+    post_ids = [p.get("id") for p in published if p.get("id")]
 
-    out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"✔️  {len(meta)} posts publicados salvos em: {out_path}")
-    return 0
+    ensure_dir(args.out_ids)
+    with open(args.out_ids, "w", encoding="utf-8") as f:
+        json.dump(post_ids, f, ensure_ascii=False, indent=2)
+    print(f"IDs salvos em: {args.out_ids} (total: {len(post_ids)})")
+
+    if not args.no_full:
+        ensure_dir(args.out_posts)
+        with open(args.out_posts, "w", encoding="utf-8") as f:
+            json.dump(published, f, ensure_ascii=False, indent=2)
+        print(f"Posts completos salvos em: {args.out_posts}")
+
+    print("Concluído.")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    main()

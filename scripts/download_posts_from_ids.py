@@ -4,15 +4,28 @@ import os
 import subprocess
 import sys
 import time
-from typing import List, Set
+from typing import List, Set, Any
 
 
 def load_ids(ids_file: str) -> List[str]:
+    """Carrega IDs a partir de um JSON.
+
+    Suporta dois formatos:
+    - Lista simples: ["id1", "id2", ...]
+    - Objeto com chave 'ids' (ou 'post_ids'): {"ids": ["id1", ...]}
+    """
     with open(ids_file, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    ids = data.get("ids", [])
-    # Garante strings e remove vazios
-    return [str(x).strip() for x in ids if str(x).strip()]
+        data: Any = json.load(f)
+
+    if isinstance(data, list):
+        raw_ids = data
+    elif isinstance(data, dict):
+        raw_ids = data.get("ids") or data.get("post_ids") or []
+    else:
+        raw_ids = []
+
+    ids = [str(x).strip() for x in raw_ids if str(x).strip()]
+    return ids
 
 
 def ensure_dir(path: str) -> None:
@@ -97,18 +110,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Baixa todos os posts listados em um arquivo JSON de IDs, "
-            "usando scripts/get_wix_post.py, e salva cada um em posts/{id}.json"
+            "usando scripts/get_wix_post.py, e salva cada um em {out-dir}/{id}.json"
         )
     )
     parser.add_argument(
         "--ids-file",
-        default="data/published_post_ids_260.json",
-        help="Caminho para o JSON com a chave 'ids' (default: data/published_post_ids_260.json)",
+        default="data/wix_post_ids.json",
+        help=(
+            "Caminho para o JSON de IDs (default: data/wix_post_ids.json). "
+            "Aceita lista simples de strings ou objeto com chave 'ids'."
+        ),
     )
     parser.add_argument(
         "--out-dir",
-        default="posts",
-        help="Diretório de saída para salvar os posts (default: posts)",
+        default="data/posts",
+        help="Diretório de saída para salvar os posts (default: data/posts)",
     )
     parser.add_argument(
         "--overwrite",
@@ -128,4 +144,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
