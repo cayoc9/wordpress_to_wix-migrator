@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 from typing import Any, Dict, List, Optional
+import unicodedata
 
 from src.extractors.wordpress_extractor import extract_posts_from_csv, extract_posts_from_xml
 from src.parsers.ricos_parser import convert_html_to_ricos
@@ -44,31 +45,40 @@ class WordPressMigrationTool:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None, *, config_file: Optional[str] = None) -> None:
         if config_file and os.path.exists(config_file):
-            with open(config_file, "r", encoding="utf-8") as f:
-                config = json.load(f)
-        elif config is None:
-            # Default configuration
-            config = {}
+            try:
+                with open(config_file, "r", encoding="utf-8") as f:
+                    loaded_config = json.load(f)
+                if isinstance(loaded_config, dict):
+                    self.config = loaded_config
+                else:
+                    self.config = {}
+            except (json.JSONDecodeError, TypeError):
+                self.config = {}
+        elif config and isinstance(config, dict):
+            self.config = config
+        else:
+            self.config = {}
 
         # Ensure essential keys exist to prevent KeyErrors
-        config.setdefault("wix", {})
-        config["wix"].setdefault("app_id", os.getenv("WIX_APP_ID", ""))
-        config["wix"].setdefault("app_secret", os.getenv("WIX_APP_SECRET", ""))
-        config["wix"].setdefault("instance_id", os.getenv("WIX_INSTANCE_ID", ""))
-        config["wix"].setdefault("access_token", "")
-        config["wix"].setdefault("member_id", "")
-        config["wix"].setdefault("base_url", "https://www.wixapis.com")
+        if not isinstance(self.config, dict):
+            self.config = {}
+        self.config.setdefault("wix", {})
+        self.config["wix"].setdefault("app_id", os.getenv("WIX_APP_ID", ""))
+        self.config["wix"].setdefault("app_secret", os.getenv("WIX_APP_SECRET", ""))
+        self.config["wix"].setdefault("instance_id", os.getenv("WIX_INSTANCE_ID", ""))
+        self.config["wix"].setdefault("access_token", "")
+        self.config["wix"].setdefault("member_id", "")
+        self.config["wix"].setdefault("base_url", "https://www.wixapis.com")
 
-        config.setdefault("migration", {})
-        config["migration"].setdefault("dry_run", False)
-        config["migration"].setdefault("limit", None)
-        config["migration"].setdefault("wordpress_domain", "")
-        config["migration"].setdefault("wix_site_url", "")
-        config["migration"].setdefault("default_author_email", "default-author@example.com")
-        config["migration"].setdefault("publish_posts", True)
-        config["migration"].setdefault("trace", False)
+        self.config.setdefault("migration", {})
+        self.config["migration"].setdefault("dry_run", False)
+        self.config["migration"].setdefault("limit", None)
+        self.config["migration"].setdefault("wordpress_domain", "")
+        self.config["migration"].setdefault("wix_site_url", "")
+        self.config["migration"].setdefault("default_author_email", "default-author@example.com")
+        self.config["migration"].setdefault("publish_posts", True)
+        self.config["migration"].setdefault("trace", False)
         
-        self.config = config
         # Validação leve: feita no pre_flight_check para não quebrar testes/dry-run
 
         self.member_map_file = "reports/member_map.json"
@@ -169,6 +179,20 @@ class WordPressMigrationTool:
                 break
             count += 1
             slug = post.get("Slug") or ""
+            # Sanitiza slug para o padrão aceito pela Wix (ASCII minúsculo, hífens)
+            def _sanitize_slug(s: str) -> str:
+                s = unicodedata.normalize("NFKD", s)
+                s = s.encode("ascii", "ignore").decode("ascii")
+                s = s.lower().strip().replace(" ", "-")
+                import re as _re
+                s = _re.sub(r"[^a-z0-9\-]", "-", s)
+                s = _re.sub(r"-+", "-", s).strip("-")
+                return s
+            sanitized = _sanitize_slug(slug)
+            if sanitized != slug:
+                self.log_message(f"Slug sanitizado: '{slug}' => '{sanitized}'", level="INFO")
+                post["Slug"] = sanitized
+                slug = sanitized
             self.log_message(f"Migrating post '{slug}'")
 
             # Preparação de rastreabilidade por post
@@ -267,7 +291,8 @@ class WordPressMigrationTool:
                 # Create draft
                 if dry_run:
                     self.log_message(f"Dry-run: would create draft for {slug}")
-                    draft_resp = {"post": {"id": f"dry-{slug}"}}
+                    # Emula o payload esperado da API no dry-run
+                    draft_resp = {"draftPost": {"id": f"dry-{slug}"}}
                 else:
                     try:
                         draft_resp = create_draft_post(
@@ -348,7 +373,7 @@ class WordPressMigrationTool:
 
         # Generate redirects
         try:
-            generate_redirects_csv(migrated, old_domain=self.config.get("migration", {}).get("wordpress_domain", ""), new_base=new_base_url)
+            generate_redirects_csv(migrated)
             self.log_message(f"Redirect CSV generated with {len(migrated)} entries")
         except Exception as e:
             self.log_message(f"Failed to generate redirects: {e}", "ERROR")

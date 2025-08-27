@@ -48,4 +48,4 @@ Este arquivo define as regras específicas para o projeto de migração do WordP
 ## ambiente
 
 - Use python3 quando for rodar algum script python
-- acesse o env 'venv' antes de rodar os codigos 'source venv/bin/activate'
+- acesse o env '.venv' antes de rodar os codigos 'source venv/bin/activate'

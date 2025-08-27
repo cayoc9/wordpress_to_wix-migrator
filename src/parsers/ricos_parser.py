@@ -32,6 +32,9 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+def _fname(name: str, trace_prefix: Optional[str] = None) -> str:
+    return f"{trace_prefix + '_' if trace_prefix else ''}{name}"
+
 # O Dispatcher da nova arquitetura
 TAG_HANDLERS = {
     "h1": handle_heading,
@@ -73,8 +76,6 @@ def _convert_html_element_to_ricos_nodes(element: Any, **kwargs) -> List[Dict[st
     trace_event: Optional[Callable[[Dict[str, Any]], None]] = kwargs.get("trace_event")
     trace_prefix: Optional[str] = kwargs.get("trace_prefix")
 
-    def _fname(name: str) -> str:
-        return f"{trace_prefix + '_' if trace_prefix else ''}{name}"
     
     logger.debug(f"_convert_html_element_to_ricos_nodes called with tag: {tag}")
     
@@ -98,16 +99,25 @@ def _convert_html_element_to_ricos_nodes(element: Any, **kwargs) -> List[Dict[st
             params = sig.parameters
             supports_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
             handler_kwargs: Dict[str, Any] = {}
-            if "embed_strategy" in params and "embed_strategy" in kwargs:
-                handler_kwargs["embed_strategy"] = kwargs["embed_strategy"]
             if "image_importer" in params and "image_importer" in kwargs:
                 handler_kwargs["image_importer"] = kwargs["image_importer"]
+            # Alguns handlers (ex.: iframe) aceitam "embed_strategy" explicitamente
+            if "embed_strategy" in params and "embed_strategy" in kwargs:
+                handler_kwargs["embed_strategy"] = kwargs["embed_strategy"]
             if supports_kwargs:
                 for k in ("trace_dump_dir", "trace_event", "trace_prefix"):
                     if k in kwargs:
                         handler_kwargs[k] = kwargs[k]
             produced = handler(element, **handler_kwargs)
-            ricos_nodes.extend(produced)
+            # Normaliza retorno dos handlers: aceita lista de nós, nó único (dict) ou None
+            if produced is None:
+                pass
+            elif isinstance(produced, list):
+                ricos_nodes.extend(produced)
+            elif isinstance(produced, dict):
+                ricos_nodes.append(produced)
+            else:
+                logger.debug("Handler %s returned unsupported type: %s", handler, type(produced))
             if trace_event:
                 trace_event({
                     "stage": "parser",
@@ -157,8 +167,8 @@ def convert_html_to_ricos(html: str, **kwargs) -> Dict[str, Any]:
             # Dump do HTML vazio para manter consistência do pipeline
             try:
                 from src.utils.trace import write_text, write_json  # import tardio para evitar ciclos
-                write_text(trace_dump_dir, _fname("02_content_original.html"), html or "")
-                write_json(trace_dump_dir, _fname("05_ricos.json"), {"nodes": []})
+                write_text(trace_dump_dir, _fname("02_content_original.html", kwargs.get("trace_prefix")), html or "")
+                write_json(trace_dump_dir, _fname("05_ricos.json", kwargs.get("trace_prefix")), {"nodes": []})
             except Exception:
                 pass
         return {"nodes": []}
@@ -179,14 +189,14 @@ def convert_html_to_ricos(html: str, **kwargs) -> Dict[str, Any]:
     if trace_dump_dir:
         try:
             from src.utils.trace import write_text  # import tardio
-            write_text(trace_dump_dir, _fname("02_content_original.html"), html)
+            write_text(trace_dump_dir, _fname("02_content_original.html", kwargs.get("trace_prefix")), html)
         except Exception:
             pass
     html = caption_pattern.sub(caption_shortcode_to_figure, html)
     if trace_dump_dir:
         try:
             from src.utils.trace import write_text  # import tardio
-            write_text(trace_dump_dir, _fname("03_content_preprocessed.html"), html)
+            write_text(trace_dump_dir, _fname("03_content_preprocessed.html", kwargs.get("trace_prefix")), html)
         except Exception:
             pass
 
@@ -229,7 +239,7 @@ def convert_html_to_ricos(html: str, **kwargs) -> Dict[str, Any]:
     if trace_dump_dir:
         try:
             from src.utils.trace import write_json  # import tardio
-            write_json(trace_dump_dir, _fname("05_ricos.json"), result)
+            write_json(trace_dump_dir, _fname("05_ricos.json", kwargs.get("trace_prefix")), result)
         except Exception:
             pass
     if trace_event:
