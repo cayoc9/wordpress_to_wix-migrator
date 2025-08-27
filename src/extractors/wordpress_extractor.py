@@ -65,7 +65,9 @@ def extract_posts_from_csv(file_path):
                     'Tags': _parse_taxonomy_field(row.get('Tags', '')),
                     'Author ID': row.get('Author ID'),
                     'Author Email': row.get('Author Email'),
-                    'Slug': row.get('Slug')
+                    'Slug': row.get('Slug'),
+                    'old_domain': row.get('_wp_old_slug', ''),
+                    'id_wix': row.get('ID WIX', '')
                 }
                 posts.append(post)
             except Exception as e:

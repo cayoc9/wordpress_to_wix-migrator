@@ -20,9 +20,10 @@ def handle_figure(element: Tag) -> List[Dict[str, Any]]:
     # TODO: Implement proper figure handling if needed for the migration.
     # For now, we might convert it to a generic HTML node or ignore it.
     # Let's convert it to an HTML node as a fallback, similar to the main converter.
+    from .utils import generate_ricos_id
     return [{
         "type": "HTML",
-        "id": "placeholder_id", # In a real scenario, this should be generated
+        "id": generate_ricos_id(),
         "htmlData": {
             "html": str(element),
             "source": "HTML",

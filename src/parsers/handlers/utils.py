@@ -131,13 +131,12 @@ def link_block_for_video(video_id: str, platform: str) -> Dict[str, Any]:
         return {}
 
     return {
-        "type": "paragraph",
+        "type": "PARAGRAPH",
         "nodes": [
-            {"type": "text", "text": "▶ ", "marks": []},
-            {
-                "type": "link",
-                "data": {"url": url},
-                "nodes": [{"type": "text", "text": text, "marks": []}],
-            },
+            {"type": "TEXT", "textData": {"text": "▶ ", "decorations": []}},
+            {"type": "TEXT", "textData": {"text": text, "decorations": [
+                {"type": "LINK", "linkData": {"url": url}}
+            ]}}
         ],
+        "paragraphData": {}
     }

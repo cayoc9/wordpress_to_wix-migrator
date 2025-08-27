@@ -3,52 +3,38 @@ from typing import Any, Dict, List, Optional
 from bs4.element import Tag
 from .utils import extract_video_info, iframe_html_for_video, link_block_for_video
 
-def handle_iframe(element: Tag, embed_strategy: str = "NATIVE") -> List[Dict[str, Any]]:
-    """Handles iframe elements."""
+def handle_iframe(element: Tag, embed_strategy: str = "HTML") -> List[Dict[str, Any]]:
+    """Converte <iframe> em nó HTML ou em parágrafo com link.
+
+    - Para YouTube/Vimeo: por padrão gera HTML (iframe); como fallback, gera LINK.
+    - Para outros iframes: gera um parágrafo com link para a URL.
+    """
     nodes: List[Dict[str, Any]] = []
     src = element.get("src")
     if isinstance(src, list):
         src = src[0] if src else ""
     video_info = extract_video_info(src or "")
-    
+
     if video_info:
         platform = video_info["platform"]
         video_id = video_info["id"]
-        
-        if embed_strategy == "NATIVE":
-            # Return Wix native video component
-            provider = "YOUTUBE" if platform == "youtube" else "VIMEO" if platform == "vimeo" else platform.upper()
+        if embed_strategy == "HTML":
             nodes.append({
-                "type": "video",
-                "data": {
-                    "videoId": video_id,
-                    "provider": provider
-                }
+                "type": "HTML",
+                "htmlData": {"html": iframe_html_for_video(video_id, platform), "source": "HTML",
+                              "containerData": {"width": {"size": "CONTENT"}}}
             })
-        elif embed_strategy == "HTML":
-            # Return HTML iframe
-            nodes.append({"type": "html", "data": {"html": iframe_html_for_video(video_id, platform)}})
-        elif embed_strategy == "LINK":
-            # Return link block
-            nodes.append(link_block_for_video(video_id, platform))
-        else:
-            # Default fallback to link block if strategy is not recognized
+        else:  # LINK (fallback)
             nodes.append(link_block_for_video(video_id, platform))
     else:
-        # Fallback for unrecognized iframes
         if src:
-            if isinstance(src, list):
-                src = src[0] if src else ""
             nodes.append({
-                "type": "paragraph",
+                "type": "PARAGRAPH",
                 "nodes": [
-                    {
-                        "type": "link",
-                        "data": {"url": src},
-                        "nodes": [
-                            {"type": "text", "text": src, "marks": []}
-                        ],
-                    }
+                    {"type": "TEXT", "textData": {"text": src, "decorations": [
+                        {"type": "LINK", "linkData": {"url": src}}
+                    ]}}
                 ],
+                "paragraphData": {}
             })
     return nodes

@@ -43,7 +43,7 @@ def _write_jsonl(path: str, data: Dict[str, Any]) -> None:
         logger.error("Failed to write to log file %s: %s", path, e)
 
 
-def report_error(code: str, post: Dict[str, Any], exc: Optional[Exception] = None) -> None:
+def report_error(code: str, post: Dict[str, Any], exc: Optional[Exception] = None, context: Optional[Dict[str, Any]] = None) -> None:
     """
     Log an error event for ``post``.
     """
@@ -51,16 +51,18 @@ def report_error(code: str, post: Dict[str, Any], exc: Optional[Exception] = Non
     entry: Dict[str, Any] = {
         "code": code,
         "message": message,
-        "slug": post.get("slug"),
-        "title": post.get("title"),
+        "slug": post.get("Slug") or post.get("slug"),
+        "title": post.get("Title") or post.get("title"),
     }
     if exc is not None:
         entry["error_details"] = str(exc)
+    if context:
+        entry.update(context)
     logger.error("[FAIL] %s - Slug: %s", message, post.get('slug', 'N/A'))
     _write_jsonl(_ERROR_LOG, entry)
 
 
-def report_ok(code: str, post: Dict[str, Any], extra: Optional[Dict[str, Any]] = None) -> None:
+def report_ok(code: str, post: Dict[str, Any], extra: Optional[Dict[str, Any]] = None, context: Optional[Dict[str, Any]] = None) -> None:
     """
     Log a successful event for ``post``.
     """
@@ -68,10 +70,12 @@ def report_ok(code: str, post: Dict[str, Any], extra: Optional[Dict[str, Any]] =
     entry: Dict[str, Any] = {
         "code": code,
         "message": message,
-        "slug": post.get("slug"),
-        "title": post.get("title"),
+        "slug": post.get("Slug") or post.get("slug"),
+        "title": post.get("Title") or post.get("title"),
     }
     if extra:
         entry.update(extra)
+    if context:
+        entry.update(context)
     logger.info("[OK] %s - Slug: %s", message, post.get('slug', 'N/A'))
     _write_jsonl(_OK_LOG, entry)

@@ -4,21 +4,25 @@
 """
 Gera um token de acesso da API do Wix usando as credenciais do cliente
 e o salva em 'wix_token.json' no diretório raiz.
+
+Também pode ser executado como script shell (bash) para compatibilidade.
 """
 
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 
 import requests
-  
+
 # -- Credenciais e configurações --
 CLIENT_ID = "053cbc81-f1b2-40cd-af96-42137a61ea43"
 CLIENT_SECRET = "21360a2c-c4d6-497e-aa7d-f0fc74e6462d"
 INSTANCE_ID = "9c1e64a5-d2a2-4cfb-aef1-9b9b5ca5d99f"
 TOKEN_URL = "https://www.wixapis.com/oauth2/token"
-OUTPUT_FILE = Path(__file__).parent.parent / "wix_token.json"
+OUTPUT_FILE = Path(__file__).parent.parent.parent / "wix_token.json"
 
 
 def generate_token() -> dict | None:
@@ -70,8 +74,15 @@ def main():
     token_data = generate_token()
     if token_data:
         save_token_to_file(token_data, OUTPUT_FILE)
+        # Verifica se o arquivo foi criado e não está vazio
+        if OUTPUT_FILE.exists() and OUTPUT_FILE.stat().st_size > 0:
+            print(f"Token do Wix gerado e salvo com sucesso em {OUTPUT_FILE}.")
+        else:
+            print("Erro: Falha ao gerar o token do Wix.")
+            sys.exit(1)
     else:
         print("Falha ao gerar o token. O arquivo não foi atualizado.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

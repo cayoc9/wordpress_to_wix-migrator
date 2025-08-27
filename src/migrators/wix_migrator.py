@@ -152,8 +152,35 @@ def check_connection(cfg: Dict[str, str]) -> bool:
         return False
 
 ###############################################################################
-# Member helpers
+# Taxonomy helpers
 ###############################################################################
+
+def get_tag_by_label(cfg: Dict[str, str], label: str) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves a tag by its label.
+
+    :param cfg: Wix configuration dictionary with an ``access_token`` and ``base_url``.
+    :param label: The label of the tag to retrieve.
+    :return: The tag object if found, or ``None`` if not found or on error.
+    """
+    _limiter.wait()
+    def do_request() -> requests.Response:
+        # Use the list endpoint with a filter to find the tag by label
+        return requests.get(
+            f"{cfg['base_url']}/blog/v3/tags?filter=label='{label}'",
+            headers=wix_headers(cfg),
+        )
+    try:
+        resp = with_retries(do_request)
+        tags = resp.json().get("tags", [])
+        if tags:
+            return tags[0]  # Return the first match
+        return None
+    except requests.HTTPError as e:
+        print(f"Failed to get tag by label '{label}': {e.response.text}")
+        return None
+
+
 
 def get_member_by_email(cfg: Dict[str, str], email: str) -> Optional[Dict[str, Any]]:
     """
@@ -358,6 +385,23 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
                     print(f"DEBUG: Successfully created {kind} '{label}' with ID: {term_id}")
                 else:
                     print(f"ERROR: Failed to get ID for newly created {kind} '{label}'. Response: {resp.json()}")
+            except requests.HTTPError as e:
+                if e.response.status_code == 409 and kind == "tags":  # Conflict, tag might already exist
+                    print(f"DEBUG: Tag '{label}' might already exist. Trying to retrieve existing tag.")
+                    existing_tag = get_tag_by_label(cfg, label)
+                    if existing_tag and existing_tag.get("id"):
+                        term_id = existing_tag["id"]
+                        # Add to ids list only if it's not already present to avoid duplicates
+                        if term_id not in ids:
+                            ids.append(term_id)
+                        term_map[low] = term_id
+                        print(f"DEBUG: Found existing tag '{label}' with ID: {term_id}")
+                    else:
+                        print(f"ERROR: Failed to create or retrieve existing {kind} '{label}': {e.response.text}")
+                        continue
+                else:
+                    print(f"ERROR: Failed to create {kind} '{label}': {e.response.text}")
+                    continue
             except Exception as e:
                 print(f"ERROR: Failed to create {kind} '{label}': {e}")
                 continue
@@ -421,7 +465,7 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
         return requests.post(
             api_url,
             headers={**wix_headers(cfg), "Content-Type": "application/json"},
-            data=json.dumps(body),
+            json=body,
         )
     try:
         resp = with_retries(do_request)

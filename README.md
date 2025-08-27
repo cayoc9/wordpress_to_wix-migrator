@@ -109,3 +109,31 @@ Um arquivo `reports/redirect_map.csv` será gerado com o mapeamento das URLs ant
     - Atualizar e publicar:
       `python scripts/update_wix_post.py --post-id <uuid> --file data/posts/<arquivo>.json --publish`
   - Fluxo e observações: idênticos ao script em Node.
+
+## Rastreabilidade (Extract → Parsing → Ricos)
+
+Para depurar o fluxo de extração e conversão de HTML para Rich Content, habilite o modo de trace na configuração:
+
+```json
+{
+  "wix": { "access_token": "...", "base_url": "https://www.wixapis.com" },
+  "migration": {
+    "wix_site_url": "https://seusite.wixsite.com",
+    "trace": true
+  }
+}
+```
+
+Com `trace` habilitado, a migração grava, por post, artefatos em `reports/traces/<slug>/`:
+- `01_post_normalized.json`: post normalizado após extração
+- `02_content_original.html`: HTML bruto de entrada
+- `03_content_preprocessed.html`: HTML após pré-processamento (ex.: shortcode `[caption]`)
+- `05_ricos.json`: Rich Content gerado (nós Ricos)
+- `events.jsonl`: eventos do parser (tag/handler executados, contagem de nós, etc.)
+
+- Para tabelas, o parser gera dumps adicionais por célula com prefixos, por exemplo:
+  - `table_r0_c1_02_content_original.html`, `table_r0_c1_05_ricos.json`.
+
+- Cada execução recebe um `trace_id` (visível no console e `migration.log`) para correlação com `errors.jsonl`/`success.jsonl`.
+
+Os logs gerais continuam em `reports/migration/` (`errors.jsonl`, `success.jsonl`, `summary.json`).

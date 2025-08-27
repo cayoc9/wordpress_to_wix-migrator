@@ -3,6 +3,7 @@ HTML → Ricos converter utilities
 """
 
 import logging
+import inspect
 import re
 import uuid
 from typing import Any, Callable, Dict, List, Optional
@@ -21,6 +22,7 @@ from .handlers.link_handler import handle_link
 from .handlers.list_handler import handle_list
 from .handlers.paragraph_handler import handle_paragraph
 from .handlers.misc_handlers import handle_line_break, handle_figure # Supondo um handler para <br> e <figure>
+from .handlers.script_handler import handle_script
 from .utils import generate_ricos_id
 
 __all__ = [
@@ -50,6 +52,7 @@ TAG_HANDLERS = {
     "figcaption": handle_figure, # Figcaption é melhor tratado dentro do handle_figure
     "br": handle_line_break,
     "a": handle_link,
+    "script": handle_script,
     # "table": handle_table,  # Vamos importar dinamicamente para evitar circular import
 }
 
@@ -67,16 +70,62 @@ def _convert_html_element_to_ricos_nodes(element: Any, **kwargs) -> List[Dict[st
     """
     ricos_nodes: List[Dict[str, Any]] = []
     tag = getattr(element, "name", None)
+    trace_event: Optional[Callable[[Dict[str, Any]], None]] = kwargs.get("trace_event")
+    trace_prefix: Optional[str] = kwargs.get("trace_prefix")
 
+    def _fname(name: str) -> str:
+        return f"{trace_prefix + '_' if trace_prefix else ''}{name}"
+    
+    logger.debug(f"_convert_html_element_to_ricos_nodes called with tag: {tag}")
+    
     if tag:
         handler = TAG_HANDLERS.get(tag)
+        logger.debug(f"Handler for tag {tag}: {handler}")
         # Tratamento especial para tabelas para evitar circular import
         if tag == "table":
             handler = get_table_handler()
         
         if handler:
-            # Passa as kwargs (image_importer, etc.) para o handler apropriado
-            ricos_nodes.extend(handler(element, **kwargs))
+            if trace_event:
+                trace_event({
+                    "stage": "parser",
+                    "event": "handle_tag_start",
+                    "tag": tag,
+                    "handler": getattr(handler, "__name__", str(handler)),
+                })
+            # Decide dinamicamente quais kwargs repassar conforme a assinatura do handler
+            sig = inspect.signature(handler)
+            params = sig.parameters
+            supports_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values())
+            handler_kwargs: Dict[str, Any] = {}
+            if "embed_strategy" in params and "embed_strategy" in kwargs:
+                handler_kwargs["embed_strategy"] = kwargs["embed_strategy"]
+            if "image_importer" in params and "image_importer" in kwargs:
+                handler_kwargs["image_importer"] = kwargs["image_importer"]
+            if supports_kwargs:
+                for k in ("trace_dump_dir", "trace_event", "trace_prefix"):
+                    if k in kwargs:
+                        handler_kwargs[k] = kwargs[k]
+            produced = handler(element, **handler_kwargs)
+            ricos_nodes.extend(produced)
+            if trace_event:
+                trace_event({
+                    "stage": "parser",
+                    "event": "handle_tag_end",
+                    "tag": tag,
+                    "produced_nodes": len(produced),
+                })
+        else:
+            logger.info("No handler found for HTML tag '%s' — converting to HTML node.", tag)
+            ricos_nodes.append({
+                "type": "HTML",
+                "id": generate_ricos_id(),
+                "htmlData": {
+                    "html": str(element),
+                    "source": "HTML",
+                    "containerData": {"width": {"custom": "940px"}}
+                }
+            })
     # Fallback para tags não mapeadas (ex: tabelas)
     elif tag:
         logger.info("Unhandled HTML tag '%s' — converting to HTML node.", tag)
@@ -98,9 +147,20 @@ def convert_html_to_ricos(html: str, **kwargs) -> Dict[str, Any]:
     Esta é a função principal que orquestra a conversão.
     """
     logger.debug("convert_html_to_ricos called: html length=%s", len(html) if html else 0)
+    # Rastreabilidade opcional
+    trace_dump_dir: Optional[str] = kwargs.get("trace_dump_dir")
+    trace_event: Optional[Callable[[Dict[str, Any]], None]] = kwargs.get("trace_event")
 
     if not html or not html.strip():
         logger.debug("Empty HTML input — returning empty nodes")
+        if trace_dump_dir:
+            # Dump do HTML vazio para manter consistência do pipeline
+            try:
+                from src.utils.trace import write_text, write_json  # import tardio para evitar ciclos
+                write_text(trace_dump_dir, _fname("02_content_original.html"), html or "")
+                write_json(trace_dump_dir, _fname("05_ricos.json"), {"nodes": []})
+            except Exception:
+                pass
         return {"nodes": []}
 
     # Pré-processamento de shortcodes ANTES de tudo
@@ -116,7 +176,19 @@ def convert_html_to_ricos(html: str, **kwargs) -> Dict[str, Any]:
             return img_tag
 
     caption_pattern = re.compile(r'\[caption(.*?)\]\s*(<img .*?>)\s*(.*?)\s*\[/caption\]', re.DOTALL)
+    if trace_dump_dir:
+        try:
+            from src.utils.trace import write_text  # import tardio
+            write_text(trace_dump_dir, _fname("02_content_original.html"), html)
+        except Exception:
+            pass
     html = caption_pattern.sub(caption_shortcode_to_figure, html)
+    if trace_dump_dir:
+        try:
+            from src.utils.trace import write_text  # import tardio
+            write_text(trace_dump_dir, _fname("03_content_preprocessed.html"), html)
+        except Exception:
+            pass
 
     soup = BeautifulSoup(html, "html.parser")
     ricos_output_nodes: List[Dict[str, Any]] = []
@@ -153,4 +225,17 @@ def convert_html_to_ricos(html: str, **kwargs) -> Dict[str, Any]:
     flush_inline_buffer()
 
     logger.debug("Generated Ricos nodes count: %d", len(ricos_output_nodes))
-    return {"nodes": ricos_output_nodes}
+    result = {"nodes": ricos_output_nodes}
+    if trace_dump_dir:
+        try:
+            from src.utils.trace import write_json  # import tardio
+            write_json(trace_dump_dir, _fname("05_ricos.json"), result)
+        except Exception:
+            pass
+    if trace_event:
+        trace_event({
+            "stage": "parser",
+            "event": "conversion_done",
+            "nodes_count": len(ricos_output_nodes),
+        })
+    return result

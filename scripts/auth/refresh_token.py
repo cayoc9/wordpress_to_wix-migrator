@@ -1,22 +1,31 @@
 import json
 import os
 import subprocess
+import sys
+from pathlib import Path
 
 def refresh_wix_token():
     """
     Executes the token generation script and updates the main configuration file.
     """
-    config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'migration_config.json')
-    token_script_path = os.path.join(os.path.dirname(__file__), 'generate_wix_token.sh')
-    temp_token_file = 'wix_token.json'
+    # Caminho para o script de geração de token
+    token_script_path = Path(__file__).parent / "generate_token.py"
+    config_path = Path(__file__).parent.parent / "config" / "migration_config.json"
+    temp_token_file = Path(__file__).parent.parent / "wix_token.json"
 
     try:
-        # Execute o script de shell para gerar o novo token
+        # Execute o script Python para gerar o novo token
         print("Gerando novo token do Wix...")
-        subprocess.run(['bash', token_script_path], check=True)
+        result = subprocess.run([sys.executable, str(token_script_path)], 
+                              cwd=token_script_path.parent.parent,
+                              capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            print(f"Erro ao executar o script de geração de token: {result.stderr}")
+            return
 
         # Verifique se o arquivo de token foi criado
-        if not os.path.exists(temp_token_file):
+        if not temp_token_file.exists():
             print("Erro: O arquivo de token 'wix_token.json' não foi gerado.")
             return
 
@@ -30,6 +39,10 @@ def refresh_wix_token():
             return
 
         # Leia o arquivo de configuração principal
+        if not config_path.exists():
+            print(f"Erro: Arquivo de configuração não encontrado em {config_path}")
+            return
+            
         with open(config_path, 'r') as f:
             config_data = json.load(f)
 
@@ -56,8 +69,8 @@ def refresh_wix_token():
         print(f"Ocorreu um erro inesperado: {e}")
     finally:
         # Remova o arquivo de token temporário
-        if os.path.exists(temp_token_file):
-            os.remove(temp_token_file)
+        if temp_token_file.exists():
+            temp_token_file.unlink()
             print(f"Arquivo temporário '{temp_token_file}' removido.")
 
 if __name__ == "__main__":

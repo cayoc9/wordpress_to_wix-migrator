@@ -19,18 +19,12 @@ def main():
     # Dynamically find export files in the 'docs' directory
     docs_path = "docs/"
     csv_files = glob.glob(os.path.join(docs_path, "posts_wordpres.csv"))
-    xml_files = glob.glob(os.path.join(docs_path, "*.xml"))
-
-    if not csv_files and not xml_files:
-        tool.log_message(
-            f"No WordPress export files (.csv or .xml) found in '{docs_path}' directory.",
-            level="ERROR",
-        )
-        return
 
     # Extract posts from the first available CSV or XML file
     csv_path = csv_files[0] if csv_files else None
-    xml_path = xml_files[0] if xml_files else None
+    xml_path = None
+
+    # EXTRATIC
     posts = tool.extract_posts(csv_path=csv_path, xml_path=xml_path)
 
     if not posts:
@@ -44,6 +38,10 @@ def main():
         posts,
         new_base_url=tool.config["migration"]["wix_site_url"]
     )
+
+    
+
+
 
     tool.log_message("Migration process finished.")
 

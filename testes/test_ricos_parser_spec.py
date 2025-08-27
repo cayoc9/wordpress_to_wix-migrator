@@ -121,3 +121,4 @@ def test_handle_other_iframe_link():
     assert ricos["nodes"][0]["type"] == "paragraph"
     assert ricos["nodes"][0]["nodes"][0]["type"] == "link"
     assert ricos["nodes"][0]["nodes"][0]["data"]["url"] == "https://www.example.com/video"
+

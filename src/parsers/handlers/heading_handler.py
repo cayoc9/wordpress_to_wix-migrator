@@ -8,8 +8,8 @@ def handle_heading(element: Tag) -> Dict[str, Any]:
     text = element.get_text(strip=True)
     if text:
         return {
-            "type": "heading",
-            "data": {"level": level},
-            "nodes": [{"type": "text", "text": text, "marks": []}],
+            "type": "HEADING",
+            "headingData": {"level": level},
+            "nodes": [{"type": "TEXT", "textData": {"text": text, "decorations": []}}],
         }
     return None
