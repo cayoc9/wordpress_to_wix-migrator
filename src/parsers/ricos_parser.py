@@ -20,6 +20,7 @@ from .handlers.image_handler import handle_image
 from .handlers.link_handler import handle_link
 from .handlers.list_handler import handle_list
 from .handlers.paragraph_handler import handle_paragraph
+from .handlers.table_handler import handle_table
 from .handlers.misc_handlers import handle_line_break, handle_figure # Supondo um handler para <br> e <figure>
 
 __all__ = [
@@ -49,6 +50,7 @@ TAG_HANDLERS = {
     "figcaption": handle_figure, # Figcaption é melhor tratado dentro do handle_figure
     "br": handle_line_break,
     "a": handle_link,
+    "table": handle_table,
 }
 
 def generate_ricos_id() -> str:

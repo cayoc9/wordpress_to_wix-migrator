@@ -121,6 +121,37 @@ def with_retries(fn: Callable[[], requests.Response], *, max_attempts: int = 5, 
 
 
 ###############################################################################
+# Connection check
+###############################################################################
+
+def check_connection(cfg: Dict[str, str]) -> bool:
+    """
+    Verifica a conexão com a API do Wix fazendo uma requisição simples.
+    Usa o endpoint de listar categorias do blog, que geralmente é seguro e está disponível.
+
+    :param cfg: Dicionário de configuração do Wix.
+    :return: ``True`` se a conexão for bem-sucedida, ``False`` caso contrário.
+    """
+    _limiter.wait()
+    def do_request() -> requests.Response:
+        # Endpoint para listar categorias do blog. É uma chamada leve e segura.
+        return requests.get(
+            f"{cfg['base_url']}/blog/v3/categories?limit=1",
+            headers=wix_headers(cfg),
+        )
+    try:
+        # A função with_retries já lida com erros de rede e status HTTP
+        with_retries(do_request)
+        return True
+    except requests.HTTPError as e:
+        # Log do erro para depuração
+        print(f"Erro na verificação de conexão com a API Wix: {e.response.status_code} - {e.response.text}")
+        return False
+    except requests.RequestException as e:
+        print(f"Erro de rede na verificação de conexão com a API Wix: {e}")
+        return False
+
+###############################################################################
 # Member helpers
 ###############################################################################
 

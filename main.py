@@ -2,6 +2,7 @@
 Entry point for the WordPress to Wix migration tool.
 """
 
+import sys
 import glob
 import json
 import os
@@ -13,6 +14,7 @@ def main():
     """
     Main function to run the WordPress to Wix migration tool.
     """
+    print(f"Python executable: {sys.executable}")
     tool = WordPressMigrationTool(config_file=CONFIG_FILE)
     tool.log_message("Starting WordPress to Wix migration.")
 

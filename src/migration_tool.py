@@ -27,6 +27,7 @@ from src.migrators.wix_migrator import (
     create_draft_post,
     publish_post,
     get_or_create_author_id,
+    check_connection,
 )
 from src.utils.errors import report_error, report_ok, ERRORS
 from src.utils.redirects import generate_redirects_csv
@@ -62,8 +63,12 @@ class WordPressMigrationTool:
         config["migration"].setdefault("limit", None)
         config["migration"].setdefault("wordpress_domain", "")
         config["migration"].setdefault("wix_site_url", "")
+        config["migration"].setdefault("default_author_email", "default-author@example.com")
+        config["migration"].setdefault("publish_posts", True)
         
         self.config = config
+        self._validate_config()
+
         self.member_map_file = "reports/member_map.json"
         self.email_to_member_id_map: Dict[str, str] = {}
         self.default_member_id: Optional[str] = None
@@ -75,6 +80,30 @@ class WordPressMigrationTool:
                     self.email_to_member_id_map = json.load(f)
             except json.JSONDecodeError:
                 self.log_message(f"Warning: Could not decode {self.member_map_file}. Starting with empty map.", level="WARNING")
+
+    def _validate_config(self) -> None: 
+        """Valida a configuração para garantir que as chaves essenciais estão presentes."""
+        wix_config = self.config.get("wix", {})
+        if not wix_config.get("access_token"):
+            raise ValueError("A chave 'access_token' do Wix está faltando na configuração.")
+        
+        migration_config = self.config.get("migration", {})
+        if not migration_config.get("wix_site_url"):
+            raise ValueError("A chave 'wix_site_url' está faltando na configuração de migração.")
+
+    def pre_flight_check(self) -> bool:
+        """Executa checagens pré-voo antes de iniciar a migração."""
+        self.log_message("Executando checagens pré-voo...")
+        if self.config.get("migration", {}).get("dry_run", False):
+            self.log_message("Modo dry-run ativado. Pulando checagens pré-voo.", level="INFO")
+            return True
+
+        if not check_connection(self.config["wix"]):
+            self.log_message("Falha na verificação de conexão com a API Wix. Verifique seu 'access_token' e a rede.", level="ERROR")
+            return False
+        
+        self.log_message("Checagens pré-voo passaram.", level="INFO")
+        return True
 
     def log_message(self, message: str, level: str = "INFO") -> None:
         ts = json.dumps(os.times())  # simplified timestamp placeholder
@@ -115,10 +144,14 @@ class WordPressMigrationTool:
             constructing redirect targets.
         :return: ``None``
         """
+        if not self.pre_flight_check():
+            return
+
         import requests  # Import here to avoid circular imports if needed elsewhere
 
         dry_run: bool = self.config.get("migration", {}).get("dry_run", False)
         limit: Optional[int] = self.config.get("migration", {}).get("limit")
+        default_author_email: str = self.config.get("migration", {}).get("default_author_email", "fallback@example.com")
         migrated: List[Dict[str, str]] = []
         count = 0
 
@@ -139,7 +172,6 @@ class WordPressMigrationTool:
 
             author_email = post.get("Author Email")
             member_id = None
-            default_author_email = "default-author@example.com" # Define a default email
 
             if not dry_run:
                 # Use the new get_or_create_author_id function
@@ -237,6 +269,12 @@ class WordPressMigrationTool:
                 report_ok("DRAFT_CREATED", post, {"draft_id": draft_id})
                 
                 # Publish
+                if not self.config.get("migration", {}).get("publish_posts", True):
+                    self.log_message(f"Skipping publishing for post '{slug}' as per configuration.", "INFO")
+                    new_url = f"{new_base_url.rstrip('/')}/post/{slug}" # Placeholder URL
+                    migrated.append({"Slug": slug, "Permalink": post.get("Permalink"), "NewURL": new_url})
+                    continue
+
                 if dry_run:
                     new_url = f"{new_base_url.rstrip('/')}/post/{slug}"
                 else:
@@ -263,3 +301,40 @@ class WordPressMigrationTool:
             self.log_message(f"Redirect CSV generated with {len(migrated)} entries")
         except Exception as e:
             self.log_message(f"Failed to generate redirects: {e}", "ERROR")
+
+        self._generate_summary_report(posts, migrated)
+
+    def _generate_summary_report(self, all_posts: List[Dict[str, Any]], migrated_posts: List[Dict[str, Any]]) -> None:
+        """Gera um relatório de sumário da migração."""
+        total_posts = len(all_posts)
+        successful_migrations = len(migrated_posts)
+        failed_migrations = total_posts - successful_migrations
+
+        summary = {
+            "total_posts": total_posts,
+            "successful_migrations": successful_migrations,
+            "failed_migrations": failed_migrations,
+            "migrated_slugs": [post["Slug"] for post in migrated_posts],
+            "failed_slugs": [post["Slug"] for post in all_posts if post["Slug"] not in [p["Slug"] for p in migrated_posts]]
+        }
+
+        summary_path = os.path.join("reports", "migration", "summary.json")
+        redirect_map_path = os.path.join("reports", "migration", "redirect_map.csv")
+        error_log_path = os.path.join("reports", "migration", "errors.jsonl")
+
+        try:
+            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+            with open(summary_path, "w", encoding="utf-8") as f:
+                json.dump(summary, f, ensure_ascii=False, indent=4)
+            self.log_message(f"Summary report generated at {summary_path}")
+        except IOError as e:
+            self.log_message(f"Failed to write summary report: {e}", "ERROR")
+        
+        # Log final para o console
+        self.log_message("--- Migration Finished ---", "INFO")
+        self.log_message(f"Total posts processed: {total_posts}", "INFO")
+        self.log_message(f"  - Successful: {successful_migrations}", "INFO")
+        self.log_message(f"  - Failed: {failed_migrations}", "INFO")
+        self.log_message(f"Redirect map: {redirect_map_path}", "INFO")
+        self.log_message(f"Error log: {error_log_path}", "INFO")
+        self.log_message(f"Summary report: {summary_path}", "INFO")
