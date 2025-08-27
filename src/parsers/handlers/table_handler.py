@@ -4,7 +4,8 @@ Handler para converter tabelas HTML para o formato de nó Ricos TABLE.
 
 from typing import Any, Dict, List
 from bs4.element import Tag
-from src.parsers.ricos_parser import generate_ricos_id, convert_html_to_ricos
+from ..ricos_parser import convert_html_to_ricos
+from ..utils import generate_ricos_id
 
 def handle_table(element: Tag, **kwargs) -> List[Dict[str, Any]]:
     """

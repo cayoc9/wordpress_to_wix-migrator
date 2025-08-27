@@ -12,7 +12,7 @@ from bs4.element import NavigableString
 
 # Importando os handlers da nova arquitetura
 from .handlers.blockquote_handler import handle_blockquote
-from .shortcode_parser import parse_shortcodes
+#from .shortcode_parser import parse_shortcodes
 from .handlers.code_block_handler import handle_code_block
 from .handlers.heading_handler import handle_heading
 from .handlers.iframe_handler import handle_iframe
@@ -20,8 +20,8 @@ from .handlers.image_handler import handle_image
 from .handlers.link_handler import handle_link
 from .handlers.list_handler import handle_list
 from .handlers.paragraph_handler import handle_paragraph
-from .handlers.table_handler import handle_table
 from .handlers.misc_handlers import handle_line_break, handle_figure # Supondo um handler para <br> e <figure>
+from .utils import generate_ricos_id
 
 __all__ = [
     "convert_html_to_ricos",
@@ -50,12 +50,13 @@ TAG_HANDLERS = {
     "figcaption": handle_figure, # Figcaption é melhor tratado dentro do handle_figure
     "br": handle_line_break,
     "a": handle_link,
-    "table": handle_table,
+    # "table": handle_table,  # Vamos importar dinamicamente para evitar circular import
 }
 
-def generate_ricos_id() -> str:
-    """Gera um ID curto para nodos Ricos."""
-    return uuid.uuid4().hex[:12]
+# Importação dinâmica do handle_table para evitar circular import
+def get_table_handler():
+    from .handlers.table_handler import handle_table
+    return handle_table
 
 # Todas as funções auxiliares da versão antiga são mantidas, pois são necessárias para os handlers
 
@@ -69,6 +70,10 @@ def _convert_html_element_to_ricos_nodes(element: Any, **kwargs) -> List[Dict[st
 
     if tag:
         handler = TAG_HANDLERS.get(tag)
+        # Tratamento especial para tabelas para evitar circular import
+        if tag == "table":
+            handler = get_table_handler()
+        
         if handler:
             # Passa as kwargs (image_importer, etc.) para o handler apropriado
             ricos_nodes.extend(handler(element, **kwargs))
@@ -99,7 +104,7 @@ def convert_html_to_ricos(html: str, **kwargs) -> Dict[str, Any]:
         return {"nodes": []}
 
     # Pré-processamento de shortcodes ANTES de tudo
-    html = parse_shortcodes(html)
+    # html = parse_shortcodes(html)
 
     # Pré-processamento de shortcodes (lógica mantida da versão antiga)
     def caption_shortcode_to_figure(match):
