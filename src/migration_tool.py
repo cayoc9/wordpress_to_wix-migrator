@@ -132,11 +132,8 @@ class WordPressMigrationTool:
             slug = post.get("Slug") or ""
             self.log_message(f"Migrating post '{slug}'")
 
-            # Print HTML content for debugging
-            print(f"DEBUG: Post '{slug}' HTML content:")
-            print(post.get("ContentHTML", ""))
-            print("---")
-
+            # Log HTML content for debugging
+            self.log_message(f"Post '{slug}' HTML content:\n{post.get('ContentHTML', '')}", level="DEBUG")
             author_email = post.get("Author Email")
             member_id = None
             default_author_email = "default-author@example.com" # Define a default email
@@ -198,7 +195,7 @@ class WordPressMigrationTool:
 
                 
                 # HTML conversion
-                print(f"DEBUG: Converting HTML to Ricos for post '{slug}'")
+                self.log_message(f"Converting HTML to Ricos for post '{slug}'", level="DEBUG")
                 image_importer = lambda url: import_image_from_url(self.config["wix"], url)
                 ricos = convert_html_to_ricos(
                     post.get("ContentHTML", ""), 
@@ -206,10 +203,7 @@ class WordPressMigrationTool:
                     image_importer=image_importer if not dry_run else None,
                     paragraph_spacing_px=2
                 )
-                print(f"DEBUG: Ricos content for post '{slug}':")
-                print(ricos)
-                print("---")
-                
+                self.log_message(f"Ricos content for post '{slug}':\n{ricos}", level="DEBUG")
                 # Create draft
                 if dry_run:
                     self.log_message(f"Dry-run: would create draft for {slug}")
