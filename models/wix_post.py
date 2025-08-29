@@ -52,6 +52,7 @@ class WixPost(BaseModel):
         extra="allow",
         populate_by_name=True,
         str_strip_whitespace=True,
+        validate_default=True,
     )
 
     title: str = Field(..., min_length=1)
