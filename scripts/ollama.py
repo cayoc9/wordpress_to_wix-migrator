@@ -141,7 +141,15 @@ CONTEÚDO: {text}"""
         return {"excerpt": "", "metaDescription": ""}
 
 def alt_text(image_url):
-    return ollama_chat_vision("moondream", "Alt-text PT-BR, objetivo, ≤150 caracteres.", image_url)
+    prompt = """Describe this image in simple Portuguese for alt-text accessibility. 
+
+Be objective and descriptive. Focus on what's important for accessibility.
+Maximum 150 characters.
+Do not use phrases like "imagem de" or "foto de".
+Just describe what you see directly.
+
+Answer only with the Portuguese description:"""
+    return ollama_chat_vision("llava:7b", prompt, image_url)
 
 def repair_ricos_nodes(html, ricos_json):
     prompt = f"""Você é um validador de JSON Ricos.
@@ -163,7 +171,15 @@ df = pd.read_csv("scripts/posts_wordpress.csv")
 
 # Função para gerar alt-text para imagens
 def generate_image_alt_text(image_url):
-    return ollama_chat_vision("moondream", "Alt-text PT-BR, objetivo, ≤150 caracteres.", image_url)
+    prompt = """Describe this image in simple Portuguese for alt-text accessibility. 
+
+Be objective and descriptive. Focus on what's important for accessibility.
+Maximum 150 characters.
+Do not use phrases like "imagem de" or "foto de".
+Just describe what you see directly.
+
+Answer only with the Portuguese description:"""
+    return ollama_chat_vision("llava:7b", prompt, image_url)
 
 # Processar cada post no CSV
 for index, row in df.iterrows():
