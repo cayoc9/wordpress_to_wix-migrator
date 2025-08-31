@@ -185,7 +185,20 @@ Answer only with the Portuguese description:"""
 for index, row in df.iterrows():
     title = row['Title']
     content = row['Content']
-    image_url = row['ImageURL'].split("|")[0]
+    
+    # DEBUG: Vamos ver o que está vindo na ImageURL
+    print(f"\n=== POST {index + 1} ===")
+    print(f"Title: {title}")
+    print(f"ImageURL raw: {repr(row['ImageURL'])}")
+    print(f"ImageURL type: {type(row['ImageURL'])}")
+    
+    # Tratamento seguro para ImageURL
+    if pd.notna(row['ImageURL']) and str(row['ImageURL']).strip():
+        image_url = str(row['ImageURL']).split("|")[0]
+        print(f"ImageURL processada: {repr(image_url)}")
+    else:
+        image_url = ""
+        print("ImageURL está vazia ou é NaN")
 
     
     # Gerar o excerpt e meta description para cada post
@@ -193,8 +206,12 @@ for index, row in df.iterrows():
     
     # Gerar alt-text para a imagem (se disponível)
     image_alt_text = ""
-    if pd.notna(image_url) and image_url != "":
+    if image_url and image_url.strip():
+        print(f"Gerando alt-text para: {image_url}")
         image_alt_text = generate_image_alt_text(image_url)
+        print(f"Alt-text gerado: {repr(image_alt_text)}")
+    else:
+        print("Pulando geração de alt-text (sem imagem)")
     
     # Exibir os resultados
     print(f"Título: {title}")

@@ -160,3 +160,7 @@ temp/*
 /docs/*
 /data/posts/*
 /config/*
+
+posts_with_meta_and_alt.csv
+
+claude.md
