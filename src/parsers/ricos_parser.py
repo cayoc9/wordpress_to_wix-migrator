@@ -643,7 +643,7 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
             temp_p.append(item.extract()) # Use extract to move the item
 
         paragraph_content_nodes = _get_text_nodes_with_decorations(temp_p)
-        if paragraph_content_nodes:
+        if paragraph_content_nodes: # This condition is key
             paragraph_node = {
                 "type": "PARAGRAPH",
                 "nodes": paragraph_content_nodes,
@@ -652,6 +652,12 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
             if paragraph_spacing_px is not None:
                 paragraph_node["style"] = {"paddingBottom": f"{paragraph_spacing_px}px"}
             ricos_output_nodes.append(paragraph_node)
+            # Add a blank line after this paragraph
+            ricos_output_nodes.append({
+                "type": "PARAGRAPH",
+                "nodes": [{"type": "TEXT", "textData": {"text": "", "decorations": []}}],
+                "paragraphData": {"textStyle": {"textAlignment": "JUSTIFY"}}
+            })
         
         inline_buffer = []
 
@@ -668,6 +674,12 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
             # Process the block-level element
             if hasattr(child, 'name') and child.name:
                  ricos_output_nodes.extend(_convert_html_element_to_ricos_nodes(child, image_importer, paragraph_spacing_px))
+            # Add a blank line after this block-level element
+            ricos_output_nodes.append({
+                "type": "PARAGRAPH",
+                "nodes": [{"type": "TEXT", "textData": {"text": "", "decorations": []}}],
+                "paragraphData": {"textStyle": {"textAlignment": "JUSTIFY"}}
+            })
 
     # Flush any remaining inline elements at the end
     flush_inline_buffer()

@@ -329,10 +329,11 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
             "altText": post.get("ImageAltText", ""),
             "displayed": True,
             "custom": True
-        }
+    }
 
     _limiter.wait()
     def do_request() -> requests.Response:
+        print(f"DEBUG: Sending draftPost payload for post '{post.get('Title')}': {json.dumps(body, indent=2)}")
         return requests.post(
             api_url,
             headers={**wix_headers(cfg), "Content-Type": "application/json"},
