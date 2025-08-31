@@ -35,6 +35,7 @@ Usage example::
 
 from __future__ import annotations
 
+import html
 import json
 import time
 from typing import Callable, Dict, Iterable, List, Optional, Any
@@ -253,11 +254,12 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
             print(f"DEBUG: Found existing {kind} '{label}' with ID: {term_id}")
         else:
             # Create a new term
-            print(f"DEBUG: Creating new {kind}: '{label}'")
+            unescaped_label = html.unescape(label)
+            print(f"DEBUG: Creating new {kind}: '{unescaped_label}' (original: '{label}')")
             _limiter.wait()
             def create() -> requests.Response:
-                payload = {"label": label} if kind == "tags" else {"category": {"label": label}}
-                return requests.post(base, headers={**wix_headers(cfg), "Content-Type": "application/json"}, json=payload if kind == "tags" else {"category": {"label": label}})
+                payload = {"label": unescaped_label} if kind == "tags" else {"category": {"label": unescaped_label}}
+                return requests.post(base, headers={**wix_headers(cfg), "Content-Type": "application/json"}, json=payload)
             try:
                 resp = with_retries(create)
                 obj = resp.json().get("tag" if kind == "tags" else "category", {})
