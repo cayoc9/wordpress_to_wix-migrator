@@ -326,6 +326,13 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
                             "name": "description",
                             "content": (post.get("MetaDescription") or post.get("Excerpt") or "")[:156]
                         }
+                    },
+                    {
+                        "type": "meta",
+                        "props": {
+                            "name": "robots",
+                            "content": "index, follow"
+                        }
                     }
                 ],
                 "seoSlug": post.get("Slug") or ""
