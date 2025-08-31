@@ -315,8 +315,20 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
             "tagIds": post.get("TagIds", []),
             "slug": post.get("Slug") or "",
             "seoData": {
-                "title": post.get("SeoTitle") or post.get("Title") or "",
-                "description": (post.get("MetaDescription") or post.get("Excerpt") or "")[:156],
+                "tags": [
+                    {
+                        "type": "title",
+                        "children": post.get("SeoTitle") or post.get("Title") or ""
+                    },
+                    {
+                        "type": "meta",
+                        "props": {
+                            "name": "description",
+                            "content": (post.get("MetaDescription") or post.get("Excerpt") or "")[:156]
+                        }
+                    }
+                ],
+                "seoSlug": post.get("Slug") or ""
             },
         }
     }
