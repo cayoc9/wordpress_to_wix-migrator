@@ -313,17 +313,18 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
             "tagIds": post.get("TagIds", []),
             "slug": post.get("Slug") or "",
             "seoData": {
-                "title": post.get("MetaTitle") or post.get("Title") or "",
+                "title": post.get("SeoTitle") or post.get("Title") or "",
                 "description": (post.get("MetaDescription") or post.get("Excerpt") or "")[:156],
             },
         }
     }
-    # Cover image
+    # Cover image with alt text support
     if post.get("FeaturedImageId"):
         body["draftPost"]["media"] = {
             "wixMedia": {
                 "image": {"id": post["FeaturedImageId"]}
             },
+            "altText": post.get("ImageAltText", ""),
             "displayed": True,
             "custom": True
         }

@@ -45,7 +45,10 @@ def extract_posts_from_csv(file_path):
                     'Order': row.get('Order'),
                     'Comment Status': row.get('Comment Status'),
                     'Ping Status': row.get('Ping Status'),
-                    'Post Modified Date': row.get('Post Modified Date')
+                    'Post Modified Date': row.get('Post Modified Date'),
+                    'MetaDescription': row.get('MetaDescription', ''),  # Add support for AI-generated meta descriptions
+                    'SeoTitle': row.get('SeoTitle', '') or row.get('Title', ''),  # Use Title as fallback for SEO title
+                    'ImageAltText': row.get('ImageAltText', '')  # Add support for AI-generated alt text
                 }
                 posts.append(post)
     except FileNotFoundError:

@@ -89,6 +89,23 @@ class WordPressMigrationTool:
 
     def extract_posts(self, csv_path: Optional[str] = None, xml_path: Optional[str] = None) -> List[Dict[str, Any]]:
         posts: List[Dict[str, Any]] = []
+        
+        # Priority order: explicit csv_path > posts_with_meta_and_alt.csv > default CSV
+        if csv_path is None:
+            # Try to use the enhanced CSV with AI-generated meta descriptions first
+            enhanced_csv = "posts_with_meta_and_alt.csv"
+            fallback_csv = "scripts/posts_wordpress.csv"
+            
+            if os.path.exists(enhanced_csv):
+                csv_path = enhanced_csv
+                self.log_message(f"Using enhanced CSV with AI-generated metadata: {enhanced_csv}")
+            elif os.path.exists(fallback_csv):
+                csv_path = fallback_csv
+                self.log_message(f"Using fallback CSV (no AI enhancements): {fallback_csv}")
+            else:
+                self.log_message("No CSV files found for extraction", "ERROR")
+                return posts
+        
         if csv_path and os.path.exists(csv_path):
             self.log_message(f"Extracting posts from CSV {csv_path}")
             try:

@@ -50,10 +50,134 @@ def _get_inline_styles(element: Any) -> Dict[str, str]:
                 styles[prop.strip()] = value.strip()
     return styles
 
+def _extract_youtube_id(url: str) -> Optional[str]:
+    """
+    Extrai o ID do vídeo de uma URL do YouTube.
+    Suporta formatos: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID
+    """
+    import re
+    
+    patterns = [
+        r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([^&\n?#]+)',
+        r'youtube\.com/v/([^&\n?#]+)'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    
+    return None
+
+def _create_youtube_video_node(video_id: str, original_url: str) -> Dict[str, Any]:
+    """
+    Cria um nó de vídeo do YouTube para o formato Ricos.
+    """
+    return {
+        "type": "VIDEO",
+        "id": generate_ricos_id(),
+        "nodes": [],
+        "videoData": {
+            "video": {
+                "src": {
+                    "url": original_url
+                }
+            },
+            "thumbnail": {
+                "src": {
+                    "url": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+                },
+                "width": 480,
+                "height": 360
+            }
+        }
+    }
+
+def _detect_urls_in_text(text: str) -> List[Dict[str, Any]]:
+    """
+    Detects URLs in plain text and creates text nodes with link decorations.
+    YouTube URLs are converted to video nodes instead of links.
+    Returns a list of text nodes, some with LINK decorations.
+    """
+    import re
+    
+    # Regex para detectar URLs (http/https)
+    url_pattern = re.compile(r'https?://[^\s<>"]+[^\s<>",.]')
+    
+    text_nodes = []
+    last_end = 0
+    
+    for match in url_pattern.finditer(text):
+        start, end = match.span()
+        url = match.group()
+        
+        # Adiciona texto antes da URL (se houver)
+        if start > last_end:
+            plain_text = text[last_end:start]
+            if plain_text.strip():
+                text_nodes.append({
+                    "type": "TEXT",
+                    "textData": {
+                        "text": plain_text,
+                        "decorations": []
+                    }
+                })
+        
+        # Verifica se é um vídeo do YouTube
+        youtube_id = _extract_youtube_id(url)
+        if youtube_id:
+            # Cria nó de vídeo em vez de link
+            video_node = _create_youtube_video_node(youtube_id, url)
+            text_nodes.append(video_node)
+        else:
+            # Adiciona a URL como link normal
+            text_nodes.append({
+                "type": "TEXT", 
+                "textData": {
+                    "text": url,
+                    "decorations": [{
+                        "type": "LINK",
+                        "linkData": {
+                            "link": {
+                                "url": url,
+                                "target": "_blank",
+                                "rel": "noopener noreferrer"
+                            }
+                        }
+                    }]
+                }
+            })
+        
+        last_end = end
+    
+    # Adiciona texto restante após a última URL
+    if last_end < len(text):
+        remaining_text = text[last_end:]
+        if remaining_text.strip():
+            text_nodes.append({
+                "type": "TEXT",
+                "textData": {
+                    "text": remaining_text,
+                    "decorations": []
+                }
+            })
+    
+    # Se não há URLs, retorna o texto normal
+    if not text_nodes and text.strip():
+        text_nodes.append({
+            "type": "TEXT",
+            "textData": {
+                "text": text,
+                "decorations": []
+            }
+        })
+    
+    return text_nodes
+
 def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
     """
     Extracts text content from a BeautifulSoup element and applies Ricos decorations
-    based on inline HTML tags (strong, em, a, span).
+    based on inline HTML tags (strong, em, a, span). Also detects URLs in plain text.
     """
     text_nodes = []
     inline_styles = _get_inline_styles(element)
@@ -61,28 +185,30 @@ def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
     for child in element.contents:
         if isinstance(child, NavigableString):
             if str(child).strip():
-                text_node = {
-                    "type": "TEXT",
-                    "textData": {
-                        "text": str(child),
-                        "decorations": []
-                    }
-                }
-                # Apply inline style decorations
-                if "text-decoration" in inline_styles and "underline" in inline_styles["text-decoration"]:
-                    text_node["textData"]["decorations"].append({"type": "UNDERLINE"})
-                if "color" in inline_styles:
-                    text_node["textData"]["decorations"].append({"type": "COLOR", "colorData": {"foreground": inline_styles["color"]}})
-                if "background-color" in inline_styles:
-                    text_node["textData"]["decorations"].append({"type": "COLOR", "colorData": {"background": inline_styles["background-color"]}})
-                if "font-size" in inline_styles:
-                    # Ricos expects font size in px, so ensure it's in px
-                    font_size_val = inline_styles["font-size"].replace("px", "")
-                    try:
-                        text_node["textData"]["decorations"].append({"type": "FONT_SIZE", "fontSizeData": {"value": float(font_size_val), "unit": "PX"}})
-                    except ValueError:
-                        pass # Ignore if not a valid float
-                text_nodes.append(text_node)
+                # Detecta URLs no texto e cria nós com links automáticos
+                url_nodes = _detect_urls_in_text(str(child))
+                
+                # Aplica decorações inline styles apenas a nós de texto (não a vídeos)
+                for node in url_nodes:
+                    if node["type"] == "TEXT":
+                        decorations = node["textData"]["decorations"]
+                        
+                        # Apply inline style decorations
+                        if "text-decoration" in inline_styles and "underline" in inline_styles["text-decoration"]:
+                            decorations.append({"type": "UNDERLINE"})
+                        if "color" in inline_styles:
+                            decorations.append({"type": "COLOR", "colorData": {"foreground": inline_styles["color"]}})
+                        if "background-color" in inline_styles:
+                            decorations.append({"type": "COLOR", "colorData": {"background": inline_styles["background-color"]}})
+                        if "font-size" in inline_styles:
+                            # Ricos expects font size in px, so ensure it's in px
+                            font_size_val = inline_styles["font-size"].replace("px", "")
+                            try:
+                                decorations.append({"type": "FONT_SIZE", "fontSizeData": {"value": float(font_size_val), "unit": "PX"}})
+                            except ValueError:
+                                pass # Ignore if not a valid float
+                
+                text_nodes.extend(url_nodes)
         elif child.name in ["strong", "b"]:
             # Apply BOLD decoration to all text nodes within this strong/b tag
             for text_node in _get_text_nodes_with_decorations(child):
@@ -423,6 +549,26 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
             if node_style_data:
                 figcaption_node["style"] = node_style_data
             ricos_nodes.append(figcaption_node)
+    elif element.name == "iframe":
+        src = element.get("src")
+        if src:
+            youtube_id = _extract_youtube_id(src)
+            if youtube_id:
+                ricos_nodes.append(_create_youtube_video_node(youtube_id, src))
+            else:
+                # Fallback for non-YouTube iframes
+                print(f"INFO: Unhandled iframe source: {src}. Converting to HTML node.")
+                ricos_nodes.append({
+                    "type": "HTML",
+                    "id": generate_ricos_id(),
+                    "htmlData": {
+                        "html": str(element),
+                        "source": "HTML",
+                        "containerData": {
+                            "width": {"custom": "940px"}
+                        }
+                    }
+                })
     elif element.name in ["table", "tbody", "tr", "td", "caption"]:
         # Tables are not directly supported in Ricos. Convert to HTML node.
         print(f"INFO: HTML table element '{element.name}'. Converting to HTML node.")
@@ -482,7 +628,7 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
     ricos_output_nodes = []
     
     # Define block-level tags that should break inline grouping
-    BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "img", "br", "table", "div", "hr", "pre", "b", "strong", "i", "em", "figure", "figcaption"]
+    BLOCK_TAGS = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote", "img", "br", "table", "div", "hr", "pre", "b", "strong", "i", "em", "figure", "figcaption", "iframe"]
 
     inline_buffer = []
 
