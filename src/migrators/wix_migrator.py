@@ -314,17 +314,26 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
             "categoryIds": post.get("CategoryIds", []),
             "tagIds": post.get("TagIds", []),
             "slug": post.get("Slug") or "",
+            # Ensure no "noindex" string is present in SEO title or meta description
+            seo_title_content = post.get("SeoTitle") or post.get("Title") or ""
+            if "noindex" in seo_title_content.lower():
+                seo_title_content = seo_title_content.lower().replace("noindex", "").strip()
+
+            meta_description_content = (post.get("MetaDescription") or post.get("Excerpt") or "")[:156]
+            if "noindex" in meta_description_content.lower():
+                meta_description_content = meta_description_content.lower().replace("noindex", "").strip()
+
             "seoData": {
                 "tags": [
                     {
                         "type": "title",
-                        "children": post.get("SeoTitle") or post.get("Title") or ""
+                        "children": seo_title_content
                     },
                     {
                         "type": "meta",
                         "props": {
                             "name": "description",
-                            "content": (post.get("MetaDescription") or post.get("Excerpt") or "")[:156]
+                            "content": meta_description_content
                         }
                     },
                     {
