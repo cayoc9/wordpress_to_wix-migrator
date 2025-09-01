@@ -50,45 +50,77 @@ def _get_inline_styles(element: Any) -> Dict[str, str]:
                 styles[prop.strip()] = value.strip()
     return styles
 
-def _extract_youtube_id(url: str) -> Optional[str]:
+def _extract_video_info(url: str) -> Optional[Dict[str, str]]:
     """
-    Extrai o ID do vídeo de uma URL do YouTube.
-    Suporta formatos: youtube.com/watch?v=ID, youtu.be/ID, youtube.com/embed/ID
+    Extrai informações de vídeo de URLs de plataformas suportadas.
+    Retorna dict com 'platform' e 'id' ou None se não suportado.
     """
     import re
     
-    patterns = [
+    # YouTube
+    youtube_patterns = [
         r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([^&\n?#]+)',
         r'youtube\.com/v/([^&\n?#]+)'
     ]
     
-    for pattern in patterns:
+    for pattern in youtube_patterns:
         match = re.search(pattern, url)
         if match:
-            return match.group(1)
+            return {"platform": "youtube", "id": match.group(1)}
+    
+    # Vimeo
+    vimeo_patterns = [
+        r'vimeo\.com/(\d+)',
+        r'player\.vimeo\.com/video/(\d+)'
+    ]
+    
+    for pattern in vimeo_patterns:
+        match = re.search(pattern, url)
+        if match:
+            return {"platform": "vimeo", "id": match.group(1)}
+    
+    # Facebook
+    facebook_patterns = [
+        r'facebook\.com/.*/videos/(\d+)',
+        r'fb\.watch/([^/?]+)'
+    ]
+    
+    for pattern in facebook_patterns:
+        match = re.search(pattern, url)
+        if match:
+            return {"platform": "facebook", "id": match.group(1)}
+    
+    # Dailymotion
+    dailymotion_patterns = [
+        r'dailymotion\.com/video/([^_?]+)',
+        r'dai\.ly/([^?]+)'
+    ]
+    
+    for pattern in dailymotion_patterns:
+        match = re.search(pattern, url)
+        if match:
+            return {"platform": "dailymotion", "id": match.group(1)}
     
     return None
 
-def _create_youtube_video_node(video_id: str, original_url: str) -> Dict[str, Any]:
+def _create_video_node(original_url: str) -> Dict[str, Any]:
     """
-    Cria um nó de vídeo do YouTube para o formato Ricos.
+    Cria um nó de vídeo para o formato Ricos (YouTube, Vimeo, Facebook, Dailymotion).
     """
     return {
         "type": "VIDEO",
         "id": generate_ricos_id(),
-        "nodes": [],
         "videoData": {
+            "containerData": {
+                "width": {
+                    "size": "CONTENT"
+                },
+                "alignment": "CENTER"
+            },
             "video": {
                 "src": {
                     "url": original_url
                 }
-            },
-            "thumbnail": {
-                "src": {
-                    "url": f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-                },
-                "width": 480,
-                "height": 360
             }
         }
     }
@@ -123,11 +155,11 @@ def _detect_urls_in_text(text: str) -> List[Dict[str, Any]]:
                     }
                 })
         
-        # Verifica se é um vídeo do YouTube
-        youtube_id = _extract_youtube_id(url)
-        if youtube_id:
+        # Verifica se é um vídeo de plataforma suportada
+        video_info = _extract_video_info(url)
+        if video_info:
             # Cria nó de vídeo em vez de link
-            video_node = _create_youtube_video_node(youtube_id, url)
+            video_node = _create_video_node(url)
             text_nodes.append(video_node)
         else:
             # Adiciona a URL como link normal
@@ -560,9 +592,9 @@ def _convert_html_element_to_ricos_nodes(element: Any, image_importer: Optional[
     elif element.name == "iframe":
         src = element.get("src")
         if src:
-            youtube_id = _extract_youtube_id(src)
-            if youtube_id:
-                ricos_nodes.append(_create_youtube_video_node(youtube_id, src))
+            video_info = _extract_video_info(src)
+            if video_info:
+                ricos_nodes.append(_create_video_node(src))
             else:
                 # Fallback for non-YouTube iframes
                 print(f"INFO: Unhandled iframe source: {src}. Converting to HTML node.")
@@ -629,6 +661,22 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
 
     caption_pattern = re.compile(r'\[caption(.*?)\]\s*(<img .*?>)\s*(.*?)\s*\[/caption\]', re.DOTALL)
     html = caption_pattern.sub(caption_shortcode_to_figure, html)
+    
+    # Remove WordPress shortcodes that can't be converted
+    shortcode_patterns = [
+        r'\[button[^\]]*\].*?\[/button\]',  # Remove button shortcodes
+        r'\[/?button[^\]]*\]',  # Remove standalone button tags
+        r'\[/?quote[^\]]*\]',   # Remove quote shortcodes
+        r'\[/?pullquote[^\]]*\]',  # Remove pullquote shortcodes
+        r'\[gallery[^\]]*\]',   # Remove gallery shortcodes
+        r'\[audio[^\]]*\]',     # Remove audio shortcodes
+        r'\[video[^\]]*\]',     # Remove video shortcodes (except youtube)
+        r'\[embed[^\]]*\].*?\[/embed\]',  # Remove embed shortcodes
+        r'\[/?embed[^\]]*\]',   # Remove standalone embed tags
+    ]
+    
+    for pattern in shortcode_patterns:
+        html = re.sub(pattern, '', html, flags=re.IGNORECASE | re.DOTALL)
 
     soup = BeautifulSoup(html, "html.parser")
     ricos_output_nodes = []

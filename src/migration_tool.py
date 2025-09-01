@@ -31,6 +31,7 @@ from src.migrators.wix_migrator import (
 )
 from src.utils.errors import report_error, report_ok, ERRORS
 from src.utils.redirects import generate_redirects_csv
+from src.utils.error_logger import ErrorLogger
 
 import json
 
@@ -70,6 +71,7 @@ class WordPressMigrationTool:
         self.member_map_file = "reports/member_map.json"
         self.email_to_member_id_map: Dict[str, str] = {}
         self.default_member_id: Optional[str] = None
+        self.error_logger = ErrorLogger()
 
         # Load existing member map
         if os.path.exists(self.member_map_file):
@@ -292,12 +294,28 @@ class WordPressMigrationTool:
                         error_details = e.response.text if hasattr(e, "response") else str(e)
                         report_error("WIX_NETWORK", post, e)
                         self.log_message(f"Network error creating draft for post '{slug}': {error_details}", "ERROR")
+                        
+                        # Log to CSV for retry processing
+                        self.error_logger.log_error(
+                            post=post,
+                            error_type="DRAFT_CREATION_ERROR",
+                            error_message=f"Network error creating draft: {error_details}",
+                            error_details=error_details
+                        )
                         continue
                 
                 draft_id = (draft_resp.get("draftPost") or {}).get("id")
                 if not draft_id:
                     report_error("WIX_DRAFT_400", post)
                     self.log_message(f"Draft creation for post '{slug}' did not return an ID.", "ERROR")
+                    
+                    # Log to CSV for retry processing
+                    self.error_logger.log_error(
+                        post=post,
+                        error_type="DRAFT_ID_MISSING",
+                        error_message="Draft creation did not return an ID",
+                        error_details=f"Response: {json.dumps(draft_resp, indent=2)}"
+                    )
                     continue
                 
                 report_ok("DRAFT_CREATED", post, {"draft_id": draft_id})
@@ -313,6 +331,14 @@ class WordPressMigrationTool:
                         error_details = e.response.text if hasattr(e, "response") else str(e)
                         report_error("PUBLISH", post, e)
                         self.log_message(f"Failed to publish post '{slug}': {error_details}", "ERROR")
+                        
+                        # Log to CSV for retry processing
+                        self.error_logger.log_error(
+                            post=post,
+                            error_type="PUBLISH_ERROR",
+                            error_message=f"Error publishing post: {error_details}",
+                            error_details=error_details
+                        )
                         continue
                 
                 migrated.append({"Slug": slug, "Permalink": post.get("Permalink"), "NewURL": new_url})

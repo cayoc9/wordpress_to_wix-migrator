@@ -1,0 +1,277 @@
+[33mcommit 44ac8c2e55060f7c65d6ca379cd24612296d77f9[m[33m ([m[1;36mHEAD[m[33m)[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Sun Aug 31 19:21:47 2025 -0300
+
+    feat: Aprimora SEO de posts e garante indexação no Wix
+    
+    Corrige a estrutura do `seoData` na função `create_draft_post` em
+    `src/migrators/wix_migrator.py` para estar em conformidade com a `SeoSchema`
+    da API do Wix.
+    
+    As alterações incluem:
+    - Refatoração do `seoData` para utilizar o array `tags` com tipos `title` e `meta`
+      para o título SEO e a meta description, respectivamente.
+    - Adição explícita da meta tag `robots` com `content="index, follow"` para
+      garantir que os posts sejam indexados pelos motores de busca.
+    - Implementação de lógica para remover a string "noindex" dos campos
+      `SeoTitle` e `MetaDescription` antes do envio, como medida defensiva
+      contra possíveis interpretações incorretas pelo Wix.
+    - Correção de erro de sintaxe (`SyntaxError`) causado pelo posicionamento
+      incorreto do código Python dentro do dicionário `body`.
+    
+    Essas mudanças asseguram que as informações de SEO sejam aplicadas corretamente
+    e que os posts sejam habilitados para indexação no Wix.
+
+[33mcommit 36a84a3d1038eda803d86c4c6ff2eee7a397a108[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Sun Aug 31 19:16:58 2025 -0300
+
+    noindex
+
+[33mcommit 889ae04e40b44553a5a48c8e57e1bb43d67eabec[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Sun Aug 31 19:16:26 2025 -0300
+
+    noindex
+
+[33mcommit 96ccb9eb7fcc2971c8cb42692da533a62c3489de[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Sun Aug 31 19:07:06 2025 -0300
+
+    feat(wix): corrige estrutura de dados SEO para posts
+    
+    Refatora a função  em
+    para que o  (título SEO e meta description) seja enviado no
+    formato correto esperado pela API do Wix.
+    
+    Anteriormente, a estrutura estava incorreta, o que poderia resultar na
+    não aplicação das informações de SEO aos posts. Esta correção garante que
+    os dados de SEO sejam devidamente processados na criação dos posts.
+
+[33mcommit c17bb79a191a9d70b0109838f500bf2c2aed6a9d[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Sun Aug 31 18:27:01 2025 -0300
+
+    feat: Adiciona linha em branco programática após cada bloco Ricos
+
+[33mcommit 922e0f35ce0c23dc9e43b9278117482898a61300[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Sun Aug 31 17:54:14 2025 -0300
+
+    feat: Melhora parser Ricos (links, vídeos) e corrige criação de tags
+
+[33mcommit 63ccaf2bfdb8017160a61fad475cb04f0146cff6[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Sun Aug 31 17:44:46 2025 -0300
+
+    feat: Adiciona parser de vídeo e links automáticos para Ricos
+
+[33mcommit fda05cb4d8047f8e89691b79bef5ecf484df981d[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Wed Aug 20 20:50:01 2025 -0300
+
+    catagorias sucesso
+
+[33mcommit 5269ee5eda97f34ff3c0e26c89bb8fe530d1a9bf[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Wed Aug 20 20:27:40 2025 -0300
+
+    tags funcionando
+
+[33mcommit f74398fe688e93718a66eb1c36fc7ce23c7fa521[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Wed Aug 20 20:20:27 2025 -0300
+
+    categoria funcionando
+
+[33mcommit 35a3abb20996e6ee2df1a590073d3ba975c49080[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Wed Aug 20 16:35:29 2025 -0300
+
+    functional
+
+[33mcommit 30120b17679c05d863f6cad7cff0f3c8ce4e7f26[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Wed Aug 20 14:58:08 2025 -0300
+
+    texto tratado inline
+
+[33mcommit 430f10ec3a94fb0afad0c8e3bc15411ed9d1d01f[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: cayoc9 <cayomurilo.dev@gmail.com>
+Date:   Wed Aug 20 12:34:06 2025 -0300
+
+    Atualiza configuração de migração para incluir site_id e aumentar limite para 3
+
+[33mcommit c46f477c5fa19c5bf79053be2672fd8fb5a225fd[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Wed Aug 20 00:15:33 2025 -0300
+
+    parsem in not html
+
+[33mcommit 649372ae82afb99a67ec66e33be3710d69cc5e8b[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Tue Aug 19 23:29:47 2025 -0300
+
+    Conversao direta de todoas as tags possiveis em risco
+
+[33mcommit 68a3801c24d86f704e0461d9b31220d7762bad55[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Tue Aug 19 23:14:08 2025 -0300
+
+    Configuracao
+
+[33mcommit 4eda5d127362b1c83bfc7440f0d0dd5054c626a8[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Tue Aug 19 01:18:42 2025 -0300
+
+    teste
+
+[33mcommit b7118cf8b828781a3eb539d95d0872400567a380[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Mon Aug 18 21:16:33 2025 -0300
+
+    funcionando migracao de html deixando a fortacao parecida com o post wordpress
+
+[33mcommit 31302168208a231f20f773fa2617ca8502a55c4f[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Mon Aug 18 21:09:11 2025 -0300
+
+    funcionando migracao de html completa
+
+[33mcommit 07e8e4fea135cf4e43c2730c29c2e9b6c2f57f4a[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Mon Aug 18 20:59:12 2025 -0300
+
+    funcionando migracao de html parcial
+
+[33mcommit 1d6f86726b9a395665f79aa60f9f195c896393b1[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Mon Aug 18 20:02:55 2025 -0300
+
+    feat(configuration): Configuration scrpit successful
+
+[33mcommit 5cb6a725a2c25ec20b30386394da7c9aeba25f50[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Sun Aug 17 18:18:32 2025 -0300
+
+    Corecoes de bugs e api
+
+[33mcommit 85153bd0f28638a3e23cd498da53b956c47d5d95[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Wed Aug 13 00:12:04 2025 -0300
+
+    Total
+
+[33mcommit fa8b522b3d1a7588cdafffc7c006dee543e3a946[m
+Author: Wallace Patrick <patrickwallace621@gmail.com>
+Date:   Tue Aug 12 22:18:51 2025 -0300
+
+    feat: Refatora o processo de migração e melhora a configuração
+    Este commit refatora o ponto de entrada principal da aplicação para usar a classe 'WordPressMigrationTool', que é mais robusta, centralizando a lógica de migração e ativando funcionalidades avançadas.
+    Principais alterações:
+    - O 'main.py' foi reescrito para atuar como um orquestrador de alto nível, delegando toda a lógica de migração para a 'WordPressMigrationTool'.
+    - O script agora descobre dinamicamente os arquivos de exportação do WordPress ('.xml' ou '.csv') no diretório 'docs/', removendo a necessidade de caminhos de arquivo fixos.
+     - Foram adicionados prompts interativos no 'main.py' para coletar e salvar configurações ausentes, como credenciais do Wix e URLs de sites, melhorando a experiência de configuração inicial.
+     - O construtor da 'WordPressMigrationTool' foi tornado mais resiliente, definindo valores padrão para a configuração para evitar erros em tempo de execução.
+     - O parser obsoleto 'src/parsers/html_parser.py' foi excluído. Todo o parsing agora é tratado pelo 'ricos_parser.py', que é mais avançado e seguro."
+
+[33mcommit 3c6661c63b896f421c0ee044cfe467ba04716961[m
+Merge: 941c22b 318e97f
+Author: cayoc9 <cayomurilo.dev@gmail.com>
+Date:   Fri Aug 8 14:23:04 2025 -0300
+
+    Merge remote-tracking branch 'origin/migration-tool-v2'
+
+[33mcommit 941c22ba8b344029be840744f2effd8f11341d60[m
+Author: cayoc9 <cayomurilo.dev@gmail.com>
+Date:   Fri Aug 8 13:59:36 2025 -0300
+
+    Refactor: Remove old Wix migration tool files and restructure project
+    
+    - Deleted obsolete README.md, main.py, requirements.txt, run_migration.sh, and source files related to the migration tool.
+    - Recreated README.md with updated instructions and project details.
+    - Reintroduced main.py with improved structure and functionality for WordPress to Wix migration.
+    - Added new requirements.txt for necessary dependencies.
+    - Implemented new extraction, migration, and parsing modules for handling WordPress data and converting it to Wix format.
+    - Enhanced logging and error handling throughout the migration process.
+
+[33mcommit 929cfb12b36fe3cc7aa8c3553c0f041aaa8af865[m
+Merge: 8707305 c626d14
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Fri Aug 8 09:54:43 2025 -0700
+
+    Merge pull request #1 from cayoc9/migration-updates
+    
+    Migration updates
+
+[33mcommit 318e97fa8c03012a464e8840dd716f8dd6b1dace[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Thu Aug 7 23:16:49 2025 -0700
+
+    Add wix migrator module
+
+[33mcommit fef973533442aee593cb534c6aebd87f1abf14e1[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Thu Aug 7 23:11:16 2025 -0700
+
+    Add migrators package initializer
+
+[33mcommit 698a0a3d9c21190da22732a0f6a446418604bf45[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Thu Aug 7 23:07:05 2025 -0700
+
+    Add ricos parser for HTML to Ricos conversion
+
+[33mcommit acd39aebd5f54149a589ec39150bad7c17230f23[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Thu Aug 7 23:03:42 2025 -0700
+
+    Add parsers package initializer
+
+[33mcommit 2fbb4601c215320f8c31527be6c8b038169fb651[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Thu Aug 7 23:00:26 2025 -0700
+
+    Add WordPress extractor module
+
+[33mcommit c626d147cc3f7e78e473e93ea5295c4c659e5257[m[33m ([m[1;31morigin/migration-updates[m[33m)[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Thu Aug 7 22:54:07 2025 -0700
+
+    Add extractors package initializer
+
+[33mcommit e048e53f56ffbc816600d5e876ce80f261680ba7[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Thu Aug 7 22:52:47 2025 -0700
+
+    Add migration tool orchestrator
+
+[33mcommit c4afbaaf509fe64aee06c040b77358806ac1a370[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Thu Aug 7 22:50:46 2025 -0700
+
+    Add src package initializer
+
+[33mcommit 8707305fb1778cdee2e47acd946f167e31e32cf5[m
+Author: cayoc9 <cayomurilo.dev@gmail.com>
+Date:   Fri Aug 8 01:03:28 2025 -0300
+
+    Adicionar README.md com instruções de uso e configuração da ferramenta de migração de blog para Wix
+
+[33mcommit 543ce5ca5edddbf768c99a87752f8f196500b037[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Fri Aug 8 00:57:00 2025 -0300
+
+    Delete wix_migration_tool/docs/Posts-Export-2025-July-24-2047.xml
+
+[33mcommit 058c162ebbda6065f2a2ed90c52953112ce8f6ee[m
+Author: Cayo Murilo <116114268+cayoc9@users.noreply.github.com>
+Date:   Fri Aug 8 00:56:44 2025 -0300
+
+    Delete wix_migration_tool/docs/Posts-Export-2025-July-25-1838.csv
+
+[33mcommit 9f5b0eff0f26da2486c1f766204d2da77eb24743[m
+Author: cayoc9 <cayomurilo.dev@gmail.com>
+Date:   Fri Aug 8 00:47:43 2025 -0300
+
+    first commit

@@ -214,11 +214,14 @@ def import_image_from_url(cfg: Dict[str, str], image_url: str) -> Optional[str]:
 # Taxonomy helpers
 ###############################################################################
 
+_term_cache: Dict[str, Dict[str, str]] = {"tags": {}, "categories": {}}
+
 def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -> List[str]:
     """
     Ensure that the given tag or category labels exist in Wix and return
     their IDs.  This function first lists existing terms from Wix and
-    then creates any missing terms.
+    then creates any missing terms. It uses an in-memory cache to avoid
+    re-fetching or re-creating terms during a single run.
 
     :param cfg: Wix configuration dictionary.
     :param kind: Either "tags" or "categories".
@@ -229,46 +232,77 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
     labels = [label.strip() for label in labels if label and label.strip()]
     if not labels:
         return ids
+
+    # Use the global cache for the specific kind (tags or categories)
+    term_map = _term_cache[kind]
     base = f"{cfg['base_url']}/blog/v3/{kind}"
-    # Retrieve existing terms
-    _limiter.wait()
-    def list_terms() -> requests.Response:
-        return requests.get(base, headers=wix_headers(cfg))
-    try:
-        resp = with_retries(list_terms)
-        existing = resp.json().get(kind, [])
-        term_map = { (t.get("label") or "").lower(): t.get("id") for t in existing }
-    except Exception as e:
-        print(f"ERROR: Failed to list existing {kind}: {e}")
-        term_map = {}
+
+    def _refresh_term_map():
+        """Helper to fetch all terms and populate the cache."""
+        _limiter.wait()
+        def list_terms() -> requests.Response:
+            return requests.get(base, headers=wix_headers(cfg))
+        try:
+            resp = with_retries(list_terms)
+            existing = resp.json().get(kind, [])
+            term_map.clear()
+            for t in existing:
+                label_key = (t.get("label") or "").lower()
+                if label_key:
+                    term_map[label_key] = t.get("id")
+            print(f"INFO: Refreshed cache for {kind}. Found {len(term_map)} items.")
+        except Exception as e:
+            print(f"ERROR: Failed to list existing {kind}: {e}")
+
+    # If the cache is empty, populate it from the API
+    if not term_map:
+        _refresh_term_map()
+
     for label in labels:
-        low = label.lower()
+        unescaped_label = html.unescape(label)
+        low = unescaped_label.lower()
+
+        # 1. Check the cache first
         if low in term_map:
             term_id = term_map[low]
-            # Add to ids list only if it's not already present to avoid duplicates
-            if term_id not in ids:
+            if term_id and term_id not in ids:
                 ids.append(term_id)
         else:
-            # Create a new term
-            unescaped_label = html.unescape(label)
+            # 2. If not in cache, create it
             _limiter.wait()
             def create() -> requests.Response:
                 payload = {"label": unescaped_label} if kind == "tags" else {"category": {"label": unescaped_label}}
                 return requests.post(base, headers={**wix_headers(cfg), "Content-Type": "application/json"}, json=payload)
+            
             try:
                 resp = with_retries(create)
                 obj = resp.json().get("tag" if kind == "tags" else "category", {})
                 term_id = obj.get("id")
                 if term_id:
-                    # Add to ids list only if it's not already present to avoid duplicates
                     if term_id not in ids:
                         ids.append(term_id)
+                    # 3. Save the new ID to the cache for future use
                     term_map[low] = term_id
                 else:
                     print(f"ERROR: Failed to get ID for newly created {kind} '{label}'. Response: {resp.json()}")
+            except requests.HTTPError as e:
+                if e.response and e.response.status_code == 409:
+                    # Conflict: The term already exists. This can happen if the initial cache was incomplete
+                    # or another process created it. Refresh the cache and try to find it again.
+                    print(f"INFO: Term '{unescaped_label}' already existed (409). Refreshing cache to find it.")
+                    _refresh_term_map()
+                    if low in term_map:
+                        term_id = term_map[low]
+                        if term_id and term_id not in ids:
+                            ids.append(term_id)
+                    else:
+                        # This case is unlikely but possible if there's a label mismatch (e.g., case sensitivity)
+                        print(f"WARNING: {kind.capitalize()} '{unescaped_label}' exists but couldn't find its ID after cache refresh.")
+                else:
+                    print(f"ERROR: Failed to create {kind} '{unescaped_label}': {e.response.text if e.response else e}")
             except Exception as e:
-                print(f"ERROR: Failed to create {kind} '{label}': {e}")
-                continue
+                print(f"ERROR: An unexpected error occurred while creating {kind} '{unescaped_label}': {e}")
+    
     return ids
 
 
