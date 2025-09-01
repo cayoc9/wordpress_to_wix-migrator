@@ -230,7 +230,6 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
     if not labels:
         return ids
     base = f"{cfg['base_url']}/blog/v3/{kind}"
-    print(f"DEBUG: get_or_create_terms called for kind: {kind}, labels: {labels}")
     # Retrieve existing terms
     _limiter.wait()
     def list_terms() -> requests.Response:
@@ -239,8 +238,6 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
         resp = with_retries(list_terms)
         existing = resp.json().get(kind, [])
         term_map = { (t.get("label") or "").lower(): t.get("id") for t in existing }
-        print(f"DEBUG: Existing {kind}: {existing}")
-        print(f"DEBUG: {kind} term_map: {term_map}")
     except Exception as e:
         print(f"ERROR: Failed to list existing {kind}: {e}")
         term_map = {}
@@ -251,11 +248,9 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
             # Add to ids list only if it's not already present to avoid duplicates
             if term_id not in ids:
                 ids.append(term_id)
-            print(f"DEBUG: Found existing {kind} '{label}' with ID: {term_id}")
         else:
             # Create a new term
             unescaped_label = html.unescape(label)
-            print(f"DEBUG: Creating new {kind}: '{unescaped_label}' (original: '{label}')")
             _limiter.wait()
             def create() -> requests.Response:
                 payload = {"label": unescaped_label} if kind == "tags" else {"category": {"label": unescaped_label}}
@@ -269,7 +264,6 @@ def get_or_create_terms(cfg: Dict[str, str], kind: str, labels: Iterable[str]) -
                     if term_id not in ids:
                         ids.append(term_id)
                     term_map[low] = term_id
-                    print(f"DEBUG: Successfully created {kind} '{label}' with ID: {term_id}")
                 else:
                     print(f"ERROR: Failed to get ID for newly created {kind} '{label}'. Response: {resp.json()}")
             except Exception as e:
@@ -361,7 +355,6 @@ def create_draft_post(cfg: Dict[str, str], post: Dict[str, Any], ricos: Dict[str
 
     _limiter.wait()
     def do_request() -> requests.Response:
-        print(f"DEBUG: Sending draftPost payload for post '{post.get('Title')}': {json.dumps(body, indent=2)}")
         return requests.post(
             api_url,
             headers={**wix_headers(cfg), "Content-Type": "application/json"},

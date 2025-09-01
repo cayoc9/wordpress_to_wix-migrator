@@ -231,7 +231,15 @@ def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
                 for text_node in _get_text_nodes_with_decorations(child):
                     text_node["textData"]["decorations"].append({
                         "type": "LINK",
-                        "linkData": {"url": href}
+                        "linkData": {
+                            "link": {
+                                "url": href,
+                                "target": "BLANK",
+                                "rel": {
+                                    "noreferrer": True
+                                }
+                            }
+                        }
                     })
                     text_nodes.append(text_node)
             else: # If <a> tag has no href, just process its children
@@ -606,10 +614,8 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
     and apply inline text decorations for strong, em, and a.
     It also groups consecutive inline elements into single paragraphs and handles <br> tags.
     """
-    print(f"DEBUG: convert_html_to_ricos called with HTML (length {len(html) if html else 0}): {html[:200] if html else ''}...")
 
     if not html or not html.strip():
-        print("DEBUG: HTML is empty, returning empty nodes")
         return {"nodes": []}
 
     # Pre-process [caption] shortcodes into <figure> and <figcaption>
@@ -684,5 +690,4 @@ def convert_html_to_ricos(html: str, *, embed_strategy: str = "html_iframe", ima
     # Flush any remaining inline elements at the end
     flush_inline_buffer()
 
-    print(f"DEBUG: Generated Ricos content (first 500 chars): {str(ricos_output_nodes)[:500]}...")
     return {"nodes": ricos_output_nodes}

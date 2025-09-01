@@ -153,9 +153,6 @@ class WordPressMigrationTool:
             self.log_message(f"Migrating post '{slug}'")
 
             # Print HTML content for debugging
-            print(f"DEBUG: Post '{slug}' HTML content:")
-            print(post.get("ContentHTML", ""))
-            print("---")
 
             author_email = post.get("Author Email")
             member_id = None
@@ -271,7 +268,6 @@ class WordPressMigrationTool:
 
                 
                 # HTML conversion
-                print(f"DEBUG: Converting HTML to Ricos for post '{slug}'")
                 image_importer = lambda url: import_image_from_url(self.config["wix"], url)
                 ricos = convert_html_to_ricos(
                     post.get("ContentHTML", ""), 
@@ -279,9 +275,6 @@ class WordPressMigrationTool:
                     image_importer=image_importer if not dry_run else None,
                     paragraph_spacing_px=2
                 )
-                print(f"DEBUG: Ricos content for post '{slug}':")
-                print(ricos)
-                print("---")
                 
                 # Create draft
                 if dry_run:
