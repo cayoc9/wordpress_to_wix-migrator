@@ -240,17 +240,28 @@ class WordPressMigrationTool:
                 continue
 
             try:
+                print(f"\n🔍 DEBUG: Processando post '{slug}'")
+                print(f"   📝 Título: {post.get('Title', 'N/A')}")
+                print(f"   🔗 Member ID: {member_id}")
+                print(f"   📷 Featured Image: {post.get('FeaturedImageUrl', 'N/A')}")
+                print(f"   🏷️ Categories: {post.get('Categories', [])}")
+                print(f"   🔖 Tags: {post.get('Tags', [])}")
+                
                 # Upload cover image
                 if post.get("FeaturedImageUrl"):
                     if dry_run:
                         self.log_message(f"Dry-run: would upload cover {post['FeaturedImageUrl']}")
+                        print(f"   🐛 DEBUG: Dry-run - pularia upload de imagem")
                     else:
+                        print(f"   📤 DEBUG: Fazendo upload da imagem featured...")
                         media_id = import_image_from_url(self.config["wix"], post["FeaturedImageUrl"])
                         if media_id:
                             post["FeaturedImageId"] = media_id
+                            print(f"   ✅ DEBUG: Imagem uploaded com ID: {media_id}")
                         else:
                             report_error("MEDIA_UPLOAD", post)
                             self.log_message(f"Failed to upload media for post '{slug}'", "ERROR")
+                            print(f"   ❌ DEBUG: Falha no upload da imagem")
 
                 # Taxonomies
                 post["CategoryIds"] = []
@@ -258,31 +269,73 @@ class WordPressMigrationTool:
                 if post.get("Categories"):
                     if dry_run:
                         self.log_message(f"Dry-run: would ensure categories {post['Categories']}")
+                        print(f"   🐛 DEBUG: Dry-run - pularia criação de categories")
                     else:
-                        post["CategoryIds"] = get_or_create_terms(self.config["wix"], "categories", post["Categories"])
+                        print(f"   📁 DEBUG: Criando/obtendo categories: {post['Categories']}")
+                        try:
+                            post["CategoryIds"] = get_or_create_terms(self.config["wix"], "categories", post["Categories"])
+                            print(f"   ✅ DEBUG: Category IDs obtidos: {post['CategoryIds']}")
+                        except Exception as cat_error:
+                            print(f"   ❌ DEBUG: Erro ao criar categories: {cat_error}")
+                            
                 if post.get("Tags"):
                     if dry_run:
                         self.log_message(f"Dry-run: would ensure tags {post['Tags']}")
+                        print(f"   🐛 DEBUG: Dry-run - pularia criação de tags")
                     else:
                         # Limit tags to 30 as per Wix API validation
-                        post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", post["Tags"][:30])
-
+                        tags_limited = post["Tags"][:30]
+                        print(f"   🏷️ DEBUG: Criando/obtendo tags (limitadas a 30): {tags_limited}")
+                        try:
+                            post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", tags_limited)
+                            print(f"   ✅ DEBUG: Tag IDs obtidos: {post['TagIds']}")
+                        except Exception as tag_error:
+                            print(f"   ❌ DEBUG: Erro ao criar tags: {tag_error}")
 
                 
                 # HTML conversion
+                print(f"   🔄 DEBUG: Convertendo HTML para Ricos...")
+                html_content = post.get("ContentHTML", "")
+                print(f"   📏 DEBUG: Tamanho do HTML: {len(html_content)} caracteres")
+                
+                # Verificar se tem iframe no conteúdo
+                has_iframe = '<iframe' in html_content.lower()
+                print(f"   🎬 DEBUG: Contém iframe: {has_iframe}")
+                
                 image_importer = lambda url: import_image_from_url(self.config["wix"], url)
-                ricos = convert_html_to_ricos(
-                    post.get("ContentHTML", ""), 
-                    embed_strategy="html_iframe",
-                    image_importer=image_importer if not dry_run else None,
-                    paragraph_spacing_px=2
-                )
+                try:
+                    ricos = convert_html_to_ricos(
+                        html_content, 
+                        embed_strategy="html_iframe",
+                        image_importer=image_importer if not dry_run else None,
+                        paragraph_spacing_px=2
+                    )
+                    print(f"   ✅ DEBUG: Conversão Ricos concluída")
+                    print(f"   📊 DEBUG: Ricos tem {len(ricos.get('nodes', []))} nós principais")
+                    
+                    # Contar tipos de nós
+                    node_types = {}
+                    def count_nodes(nodes):
+                        for node in nodes:
+                            node_type = node.get('type', 'UNKNOWN')
+                            node_types[node_type] = node_types.get(node_type, 0) + 1
+                            if 'nodes' in node:
+                                count_nodes(node['nodes'])
+                    
+                    count_nodes(ricos.get('nodes', []))
+                    print(f"   📈 DEBUG: Tipos de nós: {node_types}")
+                    
+                except Exception as ricos_error:
+                    print(f"   ❌ DEBUG: Erro na conversão Ricos: {ricos_error}")
+                    raise
                 
                 # Create draft
                 if dry_run:
                     self.log_message(f"Dry-run: would create draft for {slug}")
                     draft_resp = {"post": {"id": f"dry-{slug}"}}
+                    print(f"   🐛 DEBUG: Dry-run - simulando criação de draft")
                 else:
+                    print(f"   📝 DEBUG: Criando draft post no Wix...")
                     try:
                         draft_resp = create_draft_post(
                             self.config["wix"], 
@@ -290,8 +343,17 @@ class WordPressMigrationTool:
                             ricos,
                             member_id=member_id
                         )
+                        print(f"   ✅ DEBUG: Draft criado com sucesso!")
+                        print(f"   📋 DEBUG: Resposta keys: {list(draft_resp.keys())}")
                     except Exception as e:
                         error_details = e.response.text if hasattr(e, "response") else str(e)
+                        print(f"   ❌ DEBUG: ERRO ao criar draft!")
+                        print(f"   🔍 DEBUG: Tipo do erro: {type(e)}")
+                        print(f"   📜 DEBUG: Detalhes: {error_details}")
+                        if hasattr(e, "response"):
+                            print(f"   🌐 DEBUG: Status code: {e.response.status_code}")
+                            print(f"   🌐 DEBUG: Response headers: {dict(e.response.headers)}")
+                        
                         report_error("WIX_NETWORK", post, e)
                         self.log_message(f"Network error creating draft for post '{slug}': {error_details}", "ERROR")
                         

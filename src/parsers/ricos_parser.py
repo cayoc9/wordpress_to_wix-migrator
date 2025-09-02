@@ -172,8 +172,10 @@ def _detect_urls_in_text(text: str) -> List[Dict[str, Any]]:
                         "linkData": {
                             "link": {
                                 "url": url,
-                                "target": "_blank",
-                                "rel": "noopener noreferrer"
+                                "target": "BLANK",
+                                "rel": {
+                                    "noreferrer": True
+                                }
                             }
                         }
                     }]
@@ -206,7 +208,7 @@ def _detect_urls_in_text(text: str) -> List[Dict[str, Any]]:
     
     return text_nodes
 
-def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
+def _get_text_nodes_with_decorations(element: Any, inside_link: bool = False) -> List[Dict[str, Any]]:
     """
     Extracts text content from a BeautifulSoup element and applies Ricos decorations
     based on inline HTML tags (strong, em, a, span). Also detects URLs in plain text.
@@ -217,8 +219,19 @@ def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
     for child in element.contents:
         if isinstance(child, NavigableString):
             if str(child).strip():
-                # Detecta URLs no texto e cria nós com links automáticos
-                url_nodes = _detect_urls_in_text(str(child))
+                if inside_link:
+                    # Se já estamos dentro de um link, não detectar URLs automaticamente
+                    # Apenas criar um nó de texto simples
+                    url_nodes = [{
+                        "type": "TEXT",
+                        "textData": {
+                            "text": str(child),
+                            "decorations": []
+                        }
+                    }]
+                else:
+                    # Detecta URLs no texto e cria nós com links automáticos
+                    url_nodes = _detect_urls_in_text(str(child))
                 
                 # Aplica decorações inline styles apenas a nós de texto (não a vídeos)
                 for node in url_nodes:
@@ -260,7 +273,7 @@ def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
             # Apply LINK decoration
             href = child.get("href")
             if href:
-                for text_node in _get_text_nodes_with_decorations(child):
+                for text_node in _get_text_nodes_with_decorations(child, inside_link=True):
                     text_node["textData"]["decorations"].append({
                         "type": "LINK",
                         "linkData": {
@@ -275,7 +288,7 @@ def _get_text_nodes_with_decorations(element: Any) -> List[Dict[str, Any]]:
                     })
                     text_nodes.append(text_node)
             else: # If <a> tag has no href, just process its children
-                text_nodes.extend(_get_text_nodes_with_decorations(child))
+                text_nodes.extend(_get_text_nodes_with_decorations(child, inside_link=True))
         elif child.name == "span":
             # For span, just process its children, ignoring its own styling
             text_nodes.extend(_get_text_nodes_with_decorations(child))
