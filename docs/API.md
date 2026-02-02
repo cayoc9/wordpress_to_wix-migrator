@@ -1,10 +1,6 @@
-Perfeito 🔥 então vamos fechar isso de vez:
+# 📖 Guia — Tudo necessário para usar `Create Draft Post`
 
 Para você conseguir **usar o POST `Create Draft Post` no Blog**, precisa ter em mãos **todos os objetos relacionados** que o Blog exige como referência. Eu já te mostrei a documentação de cada parte, mas aqui vai o **pacote consolidado só com o que realmente é necessário para Blog**.
-
----
-
-# 📖 Guia — Tudo necessário para usar `Create Draft Post`
 
 ---
 

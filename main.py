@@ -2,6 +2,7 @@
 Entry point for the WordPress to Wix migration tool.
 """
 
+import sys
 import glob
 import json
 import os
@@ -9,16 +10,13 @@ from src.migration_tool import WordPressMigrationTool
 
 CONFIG_FILE = "config/migration_config.json"
 
-
-
 def main():
     """
     Main function to run the WordPress to Wix migration tool.
     """
+    print(f"Python executable: {sys.executable}")
     tool = WordPressMigrationTool(config_file=CONFIG_FILE)
     tool.log_message("Starting WordPress to Wix migration.")
-
-    
 
     # Dynamically find export files in the 'docs' directory
     docs_path = "docs/"

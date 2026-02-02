@@ -1,2 +1,5 @@
 requests
 beautifulsoup4
+google-genai
+Pillow
+pandas

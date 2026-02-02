@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from src.extractors.wordpress_extractor import extract_posts_from_csv, extract_posts_from_xml
 from src.parsers.ricos_parser import convert_html_to_ricos
@@ -26,13 +26,11 @@ from src.migrators.wix_migrator import (
     get_or_create_terms,
     create_draft_post,
     publish_post,
-    list_members,
-    create_member,
+    get_or_create_author_id,
+    check_connection,
 )
 from src.utils.errors import report_error, report_ok, ERRORS
 from src.utils.redirects import generate_redirects_csv
-
-import json
 
 class WordPressMigrationTool:
     """
@@ -65,8 +63,12 @@ class WordPressMigrationTool:
         config["migration"].setdefault("limit", None)
         config["migration"].setdefault("wordpress_domain", "")
         config["migration"].setdefault("wix_site_url", "")
+        config["migration"].setdefault("default_author_email", "default-author@example.com")
+        config["migration"].setdefault("publish_posts", True)
         
         self.config = config
+        self._validate_config()
+
         self.member_map_file = "reports/member_map.json"
         self.email_to_member_id_map: Dict[str, str] = {}
         self.default_member_id: Optional[str] = None
@@ -78,6 +80,30 @@ class WordPressMigrationTool:
                     self.email_to_member_id_map = json.load(f)
             except json.JSONDecodeError:
                 self.log_message(f"Warning: Could not decode {self.member_map_file}. Starting with empty map.", level="WARNING")
+
+    def _validate_config(self) -> None: 
+        """Valida a configuração para garantir que as chaves essenciais estão presentes."""
+        wix_config = self.config.get("wix", {})
+        if not wix_config.get("access_token"):
+            raise ValueError("A chave 'access_token' do Wix está faltando na configuração.")
+        
+        migration_config = self.config.get("migration", {})
+        if not migration_config.get("wix_site_url"):
+            raise ValueError("A chave 'wix_site_url' está faltando na configuração de migração.")
+
+    def pre_flight_check(self) -> bool:
+        """Executa checagens pré-voo antes de iniciar a migração."""
+        self.log_message("Executando checagens pré-voo...")
+        if self.config.get("migration", {}).get("dry_run", False):
+            self.log_message("Modo dry-run ativado. Pulando checagens pré-voo.", level="INFO")
+            return True
+
+        if not check_connection(self.config["wix"]):
+            self.log_message("Falha na verificação de conexão com a API Wix. Verifique seu 'access_token' e a rede.", level="ERROR")
+            return False
+        
+        self.log_message("Checagens pré-voo passaram.", level="INFO")
+        return True
 
     def log_message(self, message: str, level: str = "INFO") -> None:
         ts = json.dumps(os.times())  # simplified timestamp placeholder
@@ -118,10 +144,14 @@ class WordPressMigrationTool:
             constructing redirect targets.
         :return: ``None``
         """
+        if not self.pre_flight_check():
+            return
+
         import requests  # Import here to avoid circular imports if needed elsewhere
 
         dry_run: bool = self.config.get("migration", {}).get("dry_run", False)
         limit: Optional[int] = self.config.get("migration", {}).get("limit")
+        default_author_email: str = self.config.get("migration", {}).get("default_author_email", "fallback@example.com")
         migrated: List[Dict[str, str]] = []
         count = 0
 
@@ -143,85 +173,31 @@ class WordPressMigrationTool:
             author_email = post.get("Author Email")
             member_id = None
 
-            if author_email:
-                if author_email in self.email_to_member_id_map:
-                    member_id = self.email_to_member_id_map[author_email]
-                elif not dry_run:
-                    self.log_message(f"Creating new member for email: {author_email}", level="INFO")
-                    try:
-                        new_member = create_member(self.config["wix"], author_email)
-                        if new_member:
-                            member_id = new_member["id"]
-                            self.email_to_member_id_map[author_email] = member_id
-                            # Save the updated map
-                            os.makedirs(os.path.dirname(self.member_map_file), exist_ok=True)
-                            with open(self.member_map_file, "w", encoding="utf-8") as f:
-                                json.dump(self.email_to_member_id_map, f)
-                            self.log_message(f"Successfully created member {new_member.get('profile', {}).get('nickname', author_email)} for email: {author_email}", level="INFO")
-                        else:
-                            # This path is for other potential issues with create_member that don't raise HTTPError
-                            # If ALREADY_EXISTS is handled by create_member returning None, we should log it.
-                            # However, based on the error message, it seems to raise an exception.
-                            # Let's keep this for robustness.
-                            self.log_message(f"Failed to create member for email: {author_email} (create_member returned None). This should not happen with the new error handling. Skipping post.", level="ERROR")
-                            report_error("MEMBER_CREATION_FAILED", post)
-                            continue
-                    except requests.exceptions.HTTPError as e:
-                         if e.response is not None and e.response.status_code == 409:
-                            # Handle 409 Conflict (e.g., member already exists)
-                            self.log_message(f"Member with email {author_email} already exists (409).", level="INFO")
-                            # Check if the member ID is already in the map
-                            if author_email in self.email_to_member_id_map:
-                                member_id = self.email_to_member_id_map[author_email]
-                                self.log_message(f"Using existing member ID for {author_email} from map.", level="INFO")
-                            else:
-                                self.log_message(f"Member ID for {author_email} not found in map. Skipping post.", level="WARNING")
-                                report_error("MEMBER_ALREADY_EXISTS_BUT_NOT_IN_MAP", post)
-                                continue
-                         else:
-                            # Re-raise other HTTP errors
-                            self.log_message(f"Failed to create member for email: {author_email}. Error: {e}. Skipping post.", level="ERROR")
-                            report_error("MEMBER_CREATION_FAILED", post)
-                            continue
-                    except Exception as e: # Catch other potential errors from create_member
-                         self.log_message(f"Unexpected error creating member for email: {author_email}. Error: {e}. Skipping post.", level="ERROR")
-                         report_error("MEMBER_CREATION_FAILED", post)
-                         continue
-            else: # No author email in post
-                if self.default_member_id:
-                    member_id = self.default_member_id
-                elif not dry_run:
-                    self.log_message("No author email for post. Creating a default author.", level="INFO")
-                    default_email = "default-author@example.com"
-                    try:
-                        new_member = create_member(self.config["wix"], default_email)
-                        if new_member:
-                            self.default_member_id = new_member["id"]
-                            member_id = self.default_member_id
-                            self.email_to_member_id_map[default_email] = member_id
-                            # Save the updated map
-                            os.makedirs(os.path.dirname(self.member_map_file), exist_ok=True)
-                            with open(self.member_map_file, "w", encoding="utf-8") as f:
-                                json.dump(self.email_to_member_id_map, f)
-                            self.log_message(f"Successfully created default member {new_member.get('profile', {}).get('nickname', default_email)}", level="INFO")
-                        else:
-                            self.log_message("Failed to create default member. Skipping post.", level="ERROR")
-                            report_error("MEMBER_CREATION_FAILED", post)
-                            continue
-                    except requests.HTTPError as e:
-                        if e.response.status_code == 409: # ALREADY_EXISTS
-                            self.log_message(f"Default member with email {default_email} already exists. Cannot retrieve ID. Skipping post.", level="WARNING")
-                            report_error("MEMBER_ALREADY_EXISTS", post)
-                            continue
-                        else:
-                            self.log_message(f"Failed to create default member. Error: {e}. Skipping post.", level="ERROR")
-                            report_error("MEMBER_CREATION_FAILED", post)
-                            continue
-
-            if not member_id and not dry_run:
-                self.log_message(f"Could not find or create a member for post '{slug}'. Skipping post.", level="WARNING")
-                report_error("MISSING_MEMBER_ID", post)
-                continue
+            if not dry_run:
+                # Use the new get_or_create_author_id function
+                member_id = get_or_create_author_id(
+                    self.config["wix"],
+                    author_email if author_email else default_author_email, # Use post author email or default
+                    default_author_email
+                )
+                if member_id:
+                    # Update the map for caching within this migration run
+                    if author_email:
+                        self.email_to_member_id_map[author_email] = member_id
+                    else:
+                        self.email_to_member_id_map[default_author_email] = member_id
+                    # Save the updated map to file
+                    os.makedirs(os.path.dirname(self.member_map_file), exist_ok=True)
+                    with open(self.member_map_file, "w", encoding="utf-8") as f:
+                        json.dump(self.email_to_member_id_map, f)
+                else:
+                    self.log_message(f"Could not find or create a member for post '{slug}'. Skipping post.", level="WARNING")
+                    report_error("MISSING_MEMBER_ID", post)
+                    continue
+            else: # dry_run is True
+                self.log_message(f"Dry-run: would determine member ID for {author_email if author_email else 'default author'}", level="INFO")
+                # In dry-run, we don't actually get a member_id from API, so we can set a placeholder
+                member_id = "dry-run-member-id"
 
             try:
                 # Upload cover image
@@ -250,6 +226,8 @@ class WordPressMigrationTool:
                     else:
                         # Limit tags to 30 as per Wix API validation
                         post["TagIds"] = get_or_create_terms(self.config["wix"], "tags", post["Tags"][:30])
+
+
                 
                 # HTML conversion
                 print(f"DEBUG: Converting HTML to Ricos for post '{slug}'")
@@ -291,6 +269,12 @@ class WordPressMigrationTool:
                 report_ok("DRAFT_CREATED", post, {"draft_id": draft_id})
                 
                 # Publish
+                if not self.config.get("migration", {}).get("publish_posts", True):
+                    self.log_message(f"Skipping publishing for post '{slug}' as per configuration.", "INFO")
+                    new_url = f"{new_base_url.rstrip('/')}/post/{slug}" # Placeholder URL
+                    migrated.append({"Slug": slug, "Permalink": post.get("Permalink"), "NewURL": new_url})
+                    continue
+
                 if dry_run:
                     new_url = f"{new_base_url.rstrip('/')}/post/{slug}"
                 else:
@@ -317,3 +301,40 @@ class WordPressMigrationTool:
             self.log_message(f"Redirect CSV generated with {len(migrated)} entries")
         except Exception as e:
             self.log_message(f"Failed to generate redirects: {e}", "ERROR")
+
+        self._generate_summary_report(posts, migrated)
+
+    def _generate_summary_report(self, all_posts: List[Dict[str, Any]], migrated_posts: List[Dict[str, Any]]) -> None:
+        """Gera um relatório de sumário da migração."""
+        total_posts = len(all_posts)
+        successful_migrations = len(migrated_posts)
+        failed_migrations = total_posts - successful_migrations
+
+        summary = {
+            "total_posts": total_posts,
+            "successful_migrations": successful_migrations,
+            "failed_migrations": failed_migrations,
+            "migrated_slugs": [post["Slug"] for post in migrated_posts],
+            "failed_slugs": [post["Slug"] for post in all_posts if post["Slug"] not in [p["Slug"] for p in migrated_posts]]
+        }
+
+        summary_path = os.path.join("reports", "migration", "summary.json")
+        redirect_map_path = os.path.join("reports", "migration", "redirect_map.csv")
+        error_log_path = os.path.join("reports", "migration", "errors.jsonl")
+
+        try:
+            os.makedirs(os.path.dirname(summary_path), exist_ok=True)
+            with open(summary_path, "w", encoding="utf-8") as f:
+                json.dump(summary, f, ensure_ascii=False, indent=4)
+            self.log_message(f"Summary report generated at {summary_path}")
+        except IOError as e:
+            self.log_message(f"Failed to write summary report: {e}", "ERROR")
+        
+        # Log final para o console
+        self.log_message("--- Migration Finished ---", "INFO")
+        self.log_message(f"Total posts processed: {total_posts}", "INFO")
+        self.log_message(f"  - Successful: {successful_migrations}", "INFO")
+        self.log_message(f"  - Failed: {failed_migrations}", "INFO")
+        self.log_message(f"Redirect map: {redirect_map_path}", "INFO")
+        self.log_message(f"Error log: {error_log_path}", "INFO")
+        self.log_message(f"Summary report: {summary_path}", "INFO")

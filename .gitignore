@@ -1,6 +1,9 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+**/__pycache__/
 *.py[cod]
+*.pyc
+**/*.pyc
 *$py.class
 
 # C extensions
@@ -44,6 +47,10 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+**/.cache
+.cache-dir
+**/cache
+**/__pycache__
 nosetests.xml
 coverage.xml
 *.cover
@@ -141,9 +148,19 @@ cython_debug/
 # Ignore downloaded data if any
 /data/*
 
+
+
 /.github
+temp/*
 /.vscode
+
 /plan_refact.md
 /relatorio_analise.md
+/wix_migration_tool/docs/
 /docs/*
+/data/posts/*
+/config/*
 
+posts_with_meta_and_alt.csv
+
+claude.md
